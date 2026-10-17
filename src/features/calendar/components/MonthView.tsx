@@ -1,8 +1,9 @@
 "use client";
 import { useMemo } from "react";
-import { addDays, dayKey, formatClock } from "@/lib/dates/date-utils";
+import { addDays, dayKey, formatClock, formatClockWithFormat } from "@/lib/dates/date-utils";
 import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import type { CalendarSummary, EventRecord } from "../types";
+import { useAppI18n } from "@/lib/i18n";
 
 export function MonthView({
   anchor,
@@ -25,9 +26,12 @@ export function MonthView({
   onEventContextMenu?: (e: React.MouseEvent, id: string) => void;
   onEmptyContextMenu?: (e: React.MouseEvent, dateKey: string, minutes: number) => void;
 }) {
+  const { locale, t } = useAppI18n();
   const colorOf = (id: string) => calendars.find((c) => c.id === id)?.color ?? "var(--accent)";
 
-  const weekdays = weekStart === "sunday" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekdays = (weekStart === "sunday" ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 0]).map((weekday) =>
+    new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(2024, 0, 7 + weekday))
+  );
   const { grid, daysInMonth } = useMemo(() => {
     const zoned = toZonedTime(anchor, timeZone);
     const monthStart = new Date(zoned.getFullYear(), zoned.getMonth(), 1);
@@ -98,13 +102,13 @@ export function MonthView({
                     className="chip"
                     style={{ ["--c" as string]: colorOf(ev.calendarId) } as any}
                   >
-                    {!ev.allDay && <b>{formatClock(ev.startAt, timeZone)} </b>}
+                    {!ev.allDay && <b>{formatClockWithFormat(ev.startAt, timeZone, "12h", locale)} </b>}
                     {ev.title}
                   </button>
                 ))}
                 {list.length > 3 && (
                   <button className="more" onClick={(e) => { e.stopPropagation(); onSelectEvent(list[3]!.id); }}>
-                    +{list.length - 3} more
+                    +{list.length - 3} {locale.startsWith("fr") ? "autres" : "more"}
                   </button>
                 )}
                 <div className="dots">

@@ -16,6 +16,7 @@ import { addDays, civilDayKey, formatClockWithFormat } from "@/lib/dates/date-ut
 import { BookIcon, ChevronLeftIcon, ChevronRightIcon, NoteIcon } from "@/lib/icons";
 import { getDayNote, setDayNote } from "../lib/day-notes";
 import type { CalendarSummary, EventRecord } from "@/features/calendar/types";
+import { useAppI18n } from "@/lib/i18n";
 
 function weekNumber(d: Date): number {
   const start = new Date(d.getFullYear(), 0, 1);
@@ -58,6 +59,7 @@ function NotebookPage({
   workspaceId: string;
   onSelectEvent: (id: string) => void;
 }) {
+  const { locale, t } = useAppI18n();
   const dateKey = civilDayKey(day, timeZone);
   const dayEvents = useMemo(() => eventsForDay(events, day, timeZone), [events, day, timeZone]);
   const [note, setNote] = useState("");
@@ -70,15 +72,15 @@ function NotebookPage({
     <div className="nb-page">
       <div className="nb-page-top">
         <div>
-          <div className="nb-day">{new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(day)}</div>
-          <div className="nb-date">{new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(day)}</div>
+          <div className="nb-day">{new Intl.DateTimeFormat(locale, { timeZone, weekday: "long" }).format(day)}</div>
+          <div className="nb-date">{new Intl.DateTimeFormat(locale, { timeZone, day: "numeric", month: "long", year: "numeric" }).format(day)}</div>
         </div>
-        <span className="nb-week">Week {weekNumber(day)}</span>
+        <span className="nb-week">{t("week")} {weekNumber(day)}</span>
       </div>
 
       <div className="nb-events">
         {dayEvents.length === 0 ? (
-          <p className="nb-empty">No events.</p>
+          <p className="nb-empty">{t("noEvents")}</p>
         ) : (
           dayEvents.map((ev) => {
             const cal = calFor(calendars, ev.calendarId);
@@ -90,7 +92,7 @@ function NotebookPage({
                 onClick={() => onSelectEvent(ev.id)}
                 style={{ ["--c" as string]: cal?.color ?? "#3D7CFA" } as React.CSSProperties}
               >
-                <span className="nb-time">{ev.allDay ? "All day" : formatClockWithFormat(ev.startAt, timeZone, timeFormat)}</span>
+                <span className="nb-time">{ev.allDay ? t("allDay") : formatClockWithFormat(ev.startAt, timeZone, timeFormat, locale)}</span>
                 <span className="nb-dot" />
                 <span className="nb-evtext">
                   <b>{ev.title || "(No title)"}</b>
@@ -106,7 +108,7 @@ function NotebookPage({
         <div className="nb-notes-h"><NoteIcon size={14} /> Notes</div>
         <textarea
           value={note}
-          placeholder="Add a note for this day…"
+          placeholder={t("addDayNote")}
           onChange={(e) => {
             setNote(e.target.value);
             setDayNote(workspaceId, dateKey, e.target.value);
@@ -153,8 +155,8 @@ export function NotebookView({
       <div className="nb-head">
         <div className="nb-badge"><BookIcon size={22} /></div>
         <div>
-          <h2>Agenda</h2>
-          <p>Organize your days, page after page.</p>
+          <h2>{t("agenda")}</h2>
+          <p>{t("notebookSubtitle")}</p>
         </div>
       </div>
 
@@ -163,13 +165,13 @@ export function NotebookView({
           <button
             type="button"
             className="nb-navbtn"
-            aria-label="Previous page"
+            aria-label={t("previousPage")}
             disabled={spreadStart === 0}
             onClick={() => setSpreadStart((s) => Math.max(0, s - 2))}
           >
             <ChevronLeftIcon />
           </button>
-          <span>Previous page</span>
+          <span>{t("previousPage")}</span>
         </div>
 
         <div className="nb-book">
@@ -210,13 +212,13 @@ export function NotebookView({
           <button
             type="button"
             className="nb-navbtn"
-            aria-label="Next page"
+            aria-label={t("nextPage")}
             disabled={spreadStart + 2 >= total}
             onClick={() => setSpreadStart((s) => Math.min(total - 1, s + 2))}
           >
             <ChevronRightIcon />
           </button>
-          <span>Next page</span>
+          <span>{t("nextPage")}</span>
         </div>
       </div>
     </div>

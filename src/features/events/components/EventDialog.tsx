@@ -4,6 +4,7 @@ import { CloseIcon, TrashIcon } from "@/lib/icons";
 import type { CalendarSummary, EventDraft, EventStatus } from "@/features/calendar/types";
 import { dayKey, toInstant } from "@/lib/dates/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
+import { useAppI18n } from "@/lib/i18n";
 
 function toDateInput(iso: string, tz: string): string {
   try { return dayKey(iso, tz); } catch { return iso.slice(0, 10); }
@@ -17,7 +18,7 @@ function LabelTag({ label, onRemove }: { label: string; onRemove: () => void }) 
     <span
       className="label-tag"
       role="button"
-      aria-label={`Remove label: ${label}`}
+      aria-label={t("removeLabel", { label })}
       onClick={onRemove}
     >
       {label}
@@ -53,6 +54,7 @@ export function EventDialog({
   isSaving?: boolean;
   externalError?: string;
 }) {
+  const { t } = useAppI18n();
   const [form, setForm] = useState<EventDraft | null>(draft);
   const [error, setError] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
@@ -78,7 +80,7 @@ export function EventDialog({
   function submit() {
     if (!form) return;
     if (!form.allDay && new Date(form.endAt) <= new Date(form.startAt)) {
-      setError("End time must be after the start time.");
+      setError(t("endAfterStart"));
       return;
     }
     // Merge new label into labels array if provided
@@ -97,21 +99,21 @@ export function EventDialog({
 
   return (
     <div className="ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="dlg" role="dialog" aria-modal="true" aria-label="Event details">
+      <div className="dlg" role="dialog" aria-modal="true" aria-label={t("eventDetails")}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <input
             ref={titleRef}
             className="ttl"
-            placeholder="Add title"
+            placeholder={t("addTitle")}
             value={form.title}
             onChange={(e) => set("title", e.target.value)}
           />
-          <button className="icon" aria-label="Close" onClick={onClose}><CloseIcon /></button>
+          <button className="icon" aria-label={t("close")} onClick={onClose}><CloseIcon /></button>
         </div>
 
         <div className="fld">
-          <span className="k">Calendar</span>
-          <div className="picks" role="radiogroup" aria-label="Calendar">
+          <span className="k">{t("calendar")}</span>
+          <div className="picks" role="radiogroup" aria-label={t("calendar")}>
             {calendars.map((c) => (
               <button
                 key={c.id}
@@ -129,7 +131,7 @@ export function EventDialog({
         </div>
 
         <div className="fld">
-          <span className="k">Date</span>
+          <span className="k">{t("date")}</span>
           <input
             type="date"
             value={startDate}
@@ -141,44 +143,44 @@ export function EventDialog({
           />
           {!form.allDay && (
             <>
-              <span className="k" style={{ width: 44 }}>Start</span>
+              <span className="k" style={{ width: 44 }}>{t("start")}</span>
               <input type="time" value={startTime} onChange={(e) => setDateTime("startAt", startDate, e.target.value)} />
-              <span className="k" style={{ width: 44 }}>End</span>
+              <span className="k" style={{ width: 44 }}>{t("end")}</span>
               <input type="time" value={endTime} onChange={(e) => setDateTime("endAt", endDate, e.target.value)} />
             </>
           )}
         </div>
         {!form.allDay && (
           <div className="fld">
-            <span className="k">End date</span>
+            <span className="k">{t("endDate")}</span>
             <input type="date" value={endDate} onChange={(e) => setDateTime("endAt", e.target.value, endTime)} />
-            <span className="k" style={{ width: 48 }}>Timezone</span>
+            <span className="k" style={{ width: 48 }}>{t("timezone")}</span>
             <input type="text" value={form.timezone} onChange={(e) => set("timezone", e.target.value)} placeholder="America/Toronto" style={{ flex: 1 }} />
           </div>
         )}
         {form.allDay && (
           <div className="fld">
-            <span className="k">Timezone</span>
+            <span className="k">{t("timezone")}</span>
             <input type="text" value={form.timezone} onChange={(e) => set("timezone", e.target.value)} placeholder="America/Toronto" />
           </div>
         )}
         <div className="fld">
-          <span className="k">All day</span>
+          <span className="k">{t("allDay")}</span>
           <input type="checkbox" checked={form.allDay} onChange={(e) => set("allDay", e.target.checked)} />
         </div>
         <div className="fld">
-          <span className="k">Location</span>
-          <input type="text" value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="Add location" />
+          <span className="k">{t("location")}</span>
+          <input type="text" value={form.location} onChange={(e) => set("location", e.target.value)} placeholder={t("addLocation")} />
         </div>
         <div className="fld">
-          <span className="k">Notes</span>
-          <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Add notes" />
+          <span className="k">{t("notes")}</span>
+          <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder={t("addNotes")} />
         </div>
 
         {/* Labels / Tags section */}
         <div className="fld">
-          <span className="k">Labels</span>
-          <div className="picks" role="group" aria-label="Labels">
+          <span className="k">{t("labels")}</span>
+          <div className="picks" role="group" aria-label={t("labels")}>
             {/* Pre-existing labels chips */}
             {initialLabels.map((lbl) => (
               <LabelTag
@@ -193,7 +195,7 @@ export function EventDialog({
               className="new-label"
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Add a label..."
+              placeholder={t("addLabel")}
               disabled={isSaving}
             />
           </div>
@@ -201,8 +203,8 @@ export function EventDialog({
 
         {/* Priority section */}
         <div className="fld">
-          <span className="k">Priority</span>
-          <div className="picks" role="radiogroup" aria-label="Priority">
+          <span className="k">{t("priority")}</span>
+          <div className="picks" role="radiogroup" aria-label={t("priority")}>
             <label
               key="1"
               className={`priority-radio ${initialPriority === 1 ? "active" : ""}`}
@@ -242,8 +244,8 @@ export function EventDialog({
             </button>
           )}
           <span style={{ flex: 1 }} />
-          <button className="btn ghost" onClick={onClose} disabled={!!isSaving}>Cancel</button>
-          <button className="btn primary" onClick={submit} disabled={!!isSaving}>{isSaving ? "Saving…" : "Save event"}</button>
+          <button className="btn ghost" onClick={onClose} disabled={!!isSaving}>{t("cancel")}</button>
+          <button className="btn primary" onClick={submit} disabled={!!isSaving}>{isSaving ? t("saving") : t("saveEvent")}</button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { SearchIcon } from "@/lib/icons";
+import { useAppI18n } from "@/lib/i18n";
 
 export interface Command {
   id: string;
@@ -12,6 +13,7 @@ export interface Command {
 }
 
 export function CommandPalette({ open, onClose, commands }: { open: boolean; onClose: () => void; commands: Command[] }) {
+  const { t } = useAppI18n();
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
 
@@ -41,12 +43,12 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
 
   return (
     <div className="ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="cmd" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div className="cmd" role="dialog" aria-modal="true" aria-label={t("commandPaletteTitle")}>
         <div className="cmd-head">
           <SearchIcon size={16} style={{ color: "var(--muted)" }} />
           <input
             autoFocus
-            placeholder="What do you want to do?"
+            placeholder={t("whatDoYouWant")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -58,7 +60,7 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
           <span className="cmd-esc">ESC</span>
         </div>
         <div className="cmd-list">
-          {filtered.length === 0 && <div className="cmd-empty">No commands match “{q}”.</div>}
+          {filtered.length === 0 && <div className="cmd-empty">{t("noCommands", { query: q })}</div>}
           {filtered.map((c, i) => (
             <button
               key={c.id}
@@ -72,7 +74,7 @@ export function CommandPalette({ open, onClose, commands }: { open: boolean; onC
             </button>
           ))}
         </div>
-        <div className="cmd-foot">↑↓ navigate · Enter select · Esc close · ⌘K to toggle</div>
+        <div className="cmd-foot">↑↓ {t("navigate")} · Enter {t("select")} · Esc {t("escClose")} · ⌘K {t("toggle")}</div>
       </div>
     </div>
   );

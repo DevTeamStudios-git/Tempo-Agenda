@@ -5,10 +5,12 @@ import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { useSettings, TIMEZONES } from "@/lib/settings";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { CalendarSummary } from "@/features/calendar/types";
+import { useAppI18n } from "@/lib/i18n";
 
 type Tab = "appearance" | "calendar" | "notifications" | "ai" | "account";
 
 export function SettingsDialog({ open, onClose, calendars }: { open: boolean; onClose: () => void; calendars?: CalendarSummary[] }) {
+  const { t } = useAppI18n();
   const [theme, setThemeState] = useState<Theme>("system");
   const [tab, setTab] = useState<Tab>("appearance");
   const { settings, update } = useSettings();
@@ -30,20 +32,20 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
 
   return (
     <div className="ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="dlg" role="dialog" aria-modal="true" aria-label="Settings" style={{ maxWidth: 640, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
+      <div className="dlg" role="dialog" aria-modal="true" aria-label={t("settings")} style={{ maxWidth: 640, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 20px 14px", borderBottom: "1px solid var(--line)", flex: "none" }}>
           <SettingsIcon size={20} />
-          <h2 style={{ margin: 0, font: "700 18px var(--font-display)", flex: 1 }}>Settings</h2>
-          <button className="icon" aria-label="Close" onClick={onClose}><CloseIcon /></button>
+          <h2 style={{ margin: 0, font: "700 18px var(--font-display)", flex: 1 }}>{t("settings")}</h2>
+          <button className="icon" aria-label={t("close")} onClick={onClose}><CloseIcon /></button>
         </div>
 
         <div style={{ display: "flex", gap: 6, padding: "12px 16px", borderBottom: "1px solid var(--line)", overflowX: "auto", flex: "none" }}>
           {([
-            ["appearance", "Appearance", LayoutIcon],
-            ["calendar", "Calendar", ClockIcon],
-            ["notifications", "Notifications", BellIcon],
-            ["ai", "AI Assistant", SearchIcon],
-            ["account", "Account", UserIcon],
+            ["appearance", t("appearance"), LayoutIcon],
+            ["calendar", t("calendarTab"), ClockIcon],
+            ["notifications", t("notifications"), BellIcon],
+            ["ai", t("aiAssistant"), SearchIcon],
+            ["account", t("account"), UserIcon],
           ] as const).map(([v, label, Icon]) => (
             <button
               key={v}
@@ -72,12 +74,12 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
           {tab === "appearance" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><LayoutIcon size={14} /> Theme</div>
-                <div className="picks" role="radiogroup" aria-label="Theme" style={{ gap: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><LayoutIcon size={14} /> {t("theme")}</div>
+                <div className="picks" role="radiogroup" aria-label={t("theme")} style={{ gap: 8 }}>
                   {([
-                    ["light", "Light", SunIcon],
-                    ["dark", "Dark", MoonIcon],
-                    ["system", "System", SettingsIcon],
+                    ["light", t("light"), SunIcon],
+                    ["dark", t("dark"), MoonIcon],
+                    ["system", t("system"), SettingsIcon],
                   ] as const).map(([v, label, Icon]) => (
                     <button
                       key={v}
@@ -92,11 +94,11 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                     </button>
                   ))}
                 </div>
-                <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--muted)" }}>System follows your OS. Stored in <code style={{ background: "var(--hover)", padding: "2px 6px", borderRadius: 6 }}>localStorage</code>.</p>
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--muted)" }}>{t("systemFollowsOs").split("localStorage")[0]}<code style={{ background: "var(--hover)", padding: "2px 6px", borderRadius: 6 }}>localStorage</code>.</p>
               </div>
 
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 8 }}>Density</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 8 }}>{t("density")}</div>
                 <div className="picks">
                   {(["comfortable", "compact"] as const).map((d) => (
                     <button key={d} className="pick" role="radio" aria-checked={settings.density === d} onClick={() => update({ density: d })} style={{ flex: 1, justifyContent: "center" }}>
@@ -107,7 +109,7 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
               </div>
 
               <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5, background: "var(--hover)", padding: 12, borderRadius: 12 }}>
-                <strong style={{ color: "var(--ink)" }}>Pro tip:</strong> Try <em>Dark</em> for late-night planning — Tempo’s tokens adapt automatically.
+                <strong style={{ color: "var(--ink)" }}>{t("proTip")}</strong> {t("darkTip")}
               </div>
             </div>
           )}
@@ -115,7 +117,7 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
           {tab === "calendar" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}><GlobeIcon size={12} style={{ marginRight: 6, verticalAlign: -1 }} /> Timezone</label>
+                <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}><GlobeIcon size={12} style={{ marginRight: 6, verticalAlign: -1 }} /> {t("timezone")}</label>
                 <select
                   value={settings.timezone}
                   onChange={(e) => update({ timezone: e.target.value })}
@@ -123,22 +125,22 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                 >
                   {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
                 </select>
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--muted)" }}>Used to display event times. Your profile default is also saved on the server.</p>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--muted)" }}>{t("timezoneBody")}</p>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>Week starts on</label>
+                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>{t("weekStartsOn")}</label>
                   <div className="picks">
                     {(["monday", "sunday"] as const).map((w) => (
                       <button key={w} className="pick" role="radio" aria-checked={settings.weekStart === w} onClick={() => update({ weekStart: w })} style={{ flex: 1, justifyContent: "center" }}>
-                        {w === "monday" ? "Monday" : "Sunday"}
+                        {w === "monday" ? t("monday") : t("sunday")}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>Time format</label>
+                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>{t("timeFormat")}</label>
                   <div className="picks">
                     {(["12h", "24h"] as const).map((f) => (
                       <button key={f} className="pick" role="radio" aria-checked={settings.timeFormat === f} onClick={() => update({ timeFormat: f })} style={{ flex: 1, justifyContent: "center" }}>
@@ -151,38 +153,38 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>Default calendar</label>
+                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>{t("defaultCalendar")}</label>
                   <select
                     value={settings.defaultCalendarId ?? ""}
                     onChange={(e) => update({ defaultCalendarId: e.target.value || null })}
                     style={{ width: "100%", height: 38, borderRadius: 10, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--ink)", padding: "0 10px", fontWeight: 600 }}
                   >
-                    <option value="">— First visible —</option>
+                    <option value="">{t("firstVisible")}</option>
                     {calendars?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>Default duration</label>
+                  <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>{t("defaultDuration")}</label>
                   <select
                     value={settings.defaultDuration}
                     onChange={(e) => update({ defaultDuration: Number(e.target.value) })}
                     style={{ width: "100%", height: 38, borderRadius: 10, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--ink)", padding: "0 10px", fontWeight: 600 }}
                   >
-                    {[15, 30, 45, 60, 90, 120].map((n) => <option key={n} value={n}>{n} min</option>)}
+                    {[15, 30, 45, 60, 90, 120].map((n) => <option key={n} value={n}>{n} {t("minutesShort")}</option>)}
                   </select>
                 </div>
               </div>
 
               <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--hover)", borderRadius: 10, cursor: "pointer" }}>
                 <input type="checkbox" checked={settings.showWeekends} onChange={(e) => update({ showWeekends: e.target.checked })} />
-                <span style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>Show weekends</span>
-                <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>{settings.showWeekends ? "On" : "Off"}</span>
+                <span style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>{t("showWeekends")}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>{settings.showWeekends ? t("on") : t("off")}</span>
               </label>
 
               <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--hover)", borderRadius: 10, cursor: "pointer" }}>
                 <input type="checkbox" checked={settings.showPastEvents} onChange={(e) => update({ showPastEvents: e.target.checked })} />
-                <span style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>Show past events in Up Next</span>
-                <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>{settings.showPastEvents ? "On" : "Off"}</span>
+                <span style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)" }}>{t("showPastEvents")}</span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>{settings.showPastEvents ? t("on") : t("off")}</span>
               </label>
             </div>
           )}
@@ -192,19 +194,19 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
               <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "var(--hover)", borderRadius: 12, cursor: "pointer" }}>
                 <input type="checkbox" checked={settings.emailNotifications} onChange={(e) => update({ emailNotifications: e.target.checked })} />
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>Email reminders</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)" }}>Daily agenda + 15 min before events</span>
+                  <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{t("emailReminders")}</span>
+                  <span style={{ fontSize: 11, color: "var(--muted)" }}>{t("emailRemindersBody")}</span>
                 </span>
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "var(--hover)", borderRadius: 12, cursor: "pointer" }}>
                 <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => update({ pushNotifications: e.target.checked })} />
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>Push notifications</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)" }}>Browser notifications when supported</span>
+                  <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{t("pushNotifications")}</span>
+                  <span style={{ fontSize: 11, color: "var(--muted)" }}>{t("pushNotificationsBody")}</span>
                 </span>
               </label>
               <div style={{ fontSize: 12, color: "var(--muted)", background: "color-mix(in srgb, var(--accent) 8%, var(--surface))", border: "1px solid var(--line)", borderRadius: 10, padding: 12 }}>
-                Reminders run in the background (future: `Reminder` → queue → email/push). Toggle here controls your preference; delivery is server-side.
+                {t("remindersBackground")}
               </div>
             </div>
           )}
@@ -214,14 +216,14 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
               <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: settings.aiEnabled ? "color-mix(in srgb, var(--accent) 12%, var(--surface))" : "var(--hover)", border: `1px solid ${settings.aiEnabled ? "var(--accent)" : "var(--line)"}`, borderRadius: 12, cursor: "pointer" }}>
                 <input type="checkbox" checked={settings.aiEnabled} onChange={(e) => update({ aiEnabled: e.target.checked })} />
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>Enable AI Assistant</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)" }}>Let AI help create events, labels and manage your calendar</span>
+                  <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{t("enableAi")}</span>
+                  <span style={{ fontSize: 11, color: "var(--muted)" }}>{t("enableAiBody")}</span>
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: settings.aiEnabled ? "var(--accent)" : "var(--muted)", background: "var(--surface)", padding: "4px 8px", borderRadius: 20, border: "1px solid var(--line)" }}>{settings.aiEnabled ? "On" : "Off"}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: settings.aiEnabled ? "var(--accent)" : "var(--muted)", background: "var(--surface)", padding: "4px 8px", borderRadius: 20, border: "1px solid var(--line)" }}>{settings.aiEnabled ? t("on") : t("off")}</span>
               </label>
 
               <div style={{ opacity: settings.aiEnabled ? 1 : 0.5, pointerEvents: settings.aiEnabled ? "auto" : "none" }}>
-                <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>Provider</label>
+                <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", display: "block", marginBottom: 6 }}>{t("provider")}</label>
                 <div className="picks" style={{ gap: 8 }}>
                   {(["groq", "openrouter", "custom"] as const).map((p) => (
                     <button key={p} className="pick" role="radio" aria-checked={settings.aiProvider === p} onClick={() => update({ aiProvider: p })} style={{ flex: 1, justifyContent: "center" }}>
@@ -231,7 +233,7 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
                   <div>
-                    <label style={{ fontWeight: 700, fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Model</label>
+                    <label style={{ fontWeight: 700, fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>{t("model")}</label>
                     <input
                       value={settings.aiModel}
                       onChange={(e) => update({ aiModel: e.target.value })}
@@ -247,21 +249,21 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                     </datalist>
                   </div>
                   <div>
-                    <label style={{ fontWeight: 700, fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Key Prefix (from .env)</label>
+                    <label style={{ fontWeight: 700, fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>{t("keyPrefix")}</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, height: 38, borderRadius: 10, border: "1px solid var(--line)", background: "var(--bg)", padding: "0 10px" }}>
                       <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--muted)", background: "var(--hover)", padding: "2px 6px", borderRadius: 6, whiteSpace: "nowrap" }}>{settings.aiKeyPrefix || "gsk_"}</span>
                       <input
                         value={settings.aiKeyPrefix}
                         onChange={(e) => update({ aiKeyPrefix: e.target.value })}
                         placeholder="gsk_"
-                        title="Prefix shown before API key (from NEXT_PUBLIC_GROQ_KEY_PREFIX)"
+                        title={t("keyPrefix")}
                         style={{ flex: 1, border: 0, background: "transparent", color: "var(--ink)", fontFamily: "monospace", fontSize: 12, outline: "none" }}
                       />
                     </div>
                   </div>
                 </div>
                 <div style={{ marginTop: 12 }}>
-                  <label style={{ fontWeight: 700, fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>API Key</label>
+                  <label style={{ fontWeight: 700, fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>{t("apiKey")}</label>
                   <div style={{ display: "flex", alignItems: "center", gap: 0, height: 38, borderRadius: 10, border: "1px solid var(--line)", background: "var(--bg)", overflow: "hidden" }}>
                     <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, var(--surface))", padding: "0 10px", height: "100%", display: "grid", placeItems: "center", borderRight: "1px solid var(--line)", whiteSpace: "nowrap" }}>{settings.aiKeyPrefix || "gsk_"}</span>
                     <input
@@ -276,15 +278,15 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                 </div>
 
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 6 }}>Permissions — what AI can do</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 6 }}>{t("permissions")}</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {([
-                      ["canRead", "Read calendars & events"],
-                      ["canCreateEvents", "Create events"],
-                      ["canEditEvents", "Edit events"],
-                      ["canDeleteEvents", "Delete events"],
-                      ["canCreateCalendars", "Create calendars / labels"],
-                      ["canManageCalendars", "Manage calendars"],
+                      ["canRead", t("readCalendars")],
+                      ["canCreateEvents", t("createEvents")],
+                      ["canEditEvents", t("editEvents")],
+                      ["canDeleteEvents", t("deleteEvents")],
+                      ["canCreateCalendars", t("createCalendars")],
+                      ["canManageCalendars", t("manageCalendars")],
                     ] as const).map(([k, label]) => (
                       <label key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "var(--hover)", borderRadius: 8, cursor: "pointer" }}>
                         <input type="checkbox" checked={(settings.aiPermissions as any)[k]} onChange={(e) => update({ aiPermissions: { ...settings.aiPermissions, [k]: e.target.checked } })} />
@@ -297,12 +299,12 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                 <label style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: settings.aiVisionEnabled ? "color-mix(in srgb, var(--accent) 10%, var(--surface))" : "var(--hover)", border: `1px solid ${settings.aiVisionEnabled ? "var(--accent)" : "var(--line)"}`, borderRadius: 10, cursor: "pointer", marginTop: 12 }}>
                   <input type="checkbox" checked={settings.aiVisionEnabled} onChange={(e) => update({ aiVisionEnabled: e.target.checked })} />
                   <span style={{ flex: 1 }}>
-                    <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>Vision — image attachments</span>
-                    <span style={{ fontSize: 11, color: "var(--muted)" }}>Allow images (PNG/JPG/WebP, max 5MB) for vision models like <code>llama-3.2-11b-vision-preview</code></span>
+                    <span style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>{t("visionAttachments")}</span>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>{t("visionBody")} <code>llama-3.2-11b-vision-preview</code></span>
                   </span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: settings.aiVisionEnabled ? "var(--accent)" : "var(--muted)" }}>{settings.aiVisionEnabled ? "On" : "Off"}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: settings.aiVisionEnabled ? "var(--accent)" : "var(--muted)" }}>{settings.aiVisionEnabled ? t("on") : t("off")}</span>
                 </label>
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--muted)" }}>Attachments are sent as base64 to the provider only if the model supports vision. Files stay local until sent.</p>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--muted)" }}>{t("attachmentsLocal")}</p>
               </div>
             </div>
           )}
@@ -310,9 +312,9 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
           {tab === "account" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ background: "var(--hover)", borderRadius: 12, padding: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 4 }}>Your workspace</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 4 }}>{t("workspace")}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
-                  Signed in via Supabase Auth. Your calendars and events are isolated per workspace via <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 6, border: "1px solid var(--line)" }}>membership</code>.
+                  {t("signedInViaSupabase")} <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 6, border: "1px solid var(--line)" }}>membership</code>.
                 </div>
               </div>
 
@@ -320,7 +322,7 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
                 onClick={handleSignOut}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 40, borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--now)", fontWeight: 700, cursor: "pointer" }}
               >
-                <LogOutIcon size={16} /> Sign out
+                <LogOutIcon size={16} /> {t("signOut")}
               </button>
 
               <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
@@ -332,7 +334,7 @@ export function SettingsDialog({ open, onClose, calendars }: { open: boolean; on
 
         <div className="acts" style={{ padding: "12px 16px", borderTop: "1px solid var(--line)", flex: "none" }}>
           <span style={{ flex: 1 }} />
-          <button className="btn primary" onClick={onClose}>Done</button>
+          <button className="btn primary" onClick={onClose}>{t("doneButton")}</button>
         </div>
       </div>
     </div>

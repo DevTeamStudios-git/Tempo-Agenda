@@ -13,13 +13,14 @@ import { computePrintRange, type PrintScope } from "../lib/print-range";
 import { PrintPreview } from "./PrintPreview";
 import { readApiError } from "@/lib/api/error";
 import type { CalendarSummary, EventRecord } from "@/features/calendar/types";
+import { useAppI18n } from "@/lib/i18n";
 
 const SCOPES: { id: PrintScope; label: string }[] = [
-  { id: "day", label: "Day" },
-  { id: "week", label: "Week" },
-  { id: "month", label: "Month" },
-  { id: "agenda", label: "Agenda (30 days)" },
-  { id: "range", label: "Custom range" },
+  { id: "day", label: t("day") },
+  { id: "week", label: t("week") },
+  { id: "month", label: t("month") },
+  { id: "agenda", label: t("agenda30Days") },
+  { id: "range", label: t("customRange") },
 ];
 
 export function PrintDialog({
@@ -39,6 +40,7 @@ export function PrintDialog({
   timeZone: string;
   anchor: Date;
 }) {
+  const { t } = useAppI18n();
   const [scope, setScope] = useState<PrintScope>("week");
   const [dateKey, setDateKey] = useState("");
   const [rangeEndKey, setRangeEndKey] = useState("");
@@ -104,16 +106,16 @@ export function PrintDialog({
     <>
       {open && (
         <div className="ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-          <div className="dlg" role="dialog" aria-modal="true" aria-label="Print" style={{ maxWidth: 480 }}>
+          <div className="dlg" role="dialog" aria-modal="true" aria-label={t("printTitle")} style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <PrintIcon size={20} />
-              <h2 style={{ margin: 0, font: "700 18px var(--font-display)", flex: 1 }}>Print</h2>
+              <h2 style={{ margin: 0, font: "700 18px var(--font-display)", flex: 1 }}>{t("printTitle")}</h2>
               <button className="icon" aria-label="Close" onClick={onClose}><CloseIcon /></button>
             </div>
 
             <div className="fld" style={{ flexDirection: "column", alignItems: "stretch" }}>
-              <span className="k" style={{ width: "auto" }}>What to print</span>
-              <div className="picks" role="radiogroup" aria-label="Print scope">
+              <span className="k" style={{ width: "auto" }}>{t("whatToPrint")}</span>
+              <div className="picks" role="radiogroup" aria-label={t("whatToPrint")}>
                 {SCOPES.map((s) => (
                   <button
                     key={s.id}
@@ -131,20 +133,20 @@ export function PrintDialog({
 
             {scope === "range" ? (
               <div className="fld">
-                <span className="k">Range</span>
-                <input type="date" value={dateKey} onChange={(e) => setDateKey(e.target.value)} aria-label="Start date" />
+                <span className="k">{t("range")}</span>
+                <input type="date" value={dateKey} onChange={(e) => setDateKey(e.target.value)} aria-label={t("startDate")} />
                 <span className="to">to</span>
-                <input type="date" value={rangeEndKey} onChange={(e) => setRangeEndKey(e.target.value)} aria-label="End date" />
+                <input type="date" value={rangeEndKey} onChange={(e) => setRangeEndKey(e.target.value)} aria-label={t("endDateAria")} />
               </div>
             ) : (
               <div className="fld">
-                <span className="k">{scope === "day" ? "Day" : scope === "week" ? "Week of" : scope === "month" ? "Month of" : "Starting"}</span>
-                <input type="date" value={dateKey} onChange={(e) => setDateKey(e.target.value)} aria-label="Date" />
+                <span className="k">{scope === "day" ? t("day") : scope === "week" ? t("weekOf") : scope === "month" ? t("monthOf") : t("starting")}</span>
+                <input type="date" value={dateKey} onChange={(e) => setDateKey(e.target.value)} aria-label={t("date")} />
               </div>
             )}
 
             <div className="fld" style={{ flexDirection: "column", alignItems: "stretch" }}>
-              <span className="k" style={{ width: "auto" }}>Calendars</span>
+              <span className="k" style={{ width: "auto" }}>{t("calendarTab")}</span>
               <div className="picks">
                 {calendars.map((c) => (
                   <button
@@ -161,14 +163,14 @@ export function PrintDialog({
                 ))}
               </div>
               {selectedCals.length === 0 && (
-                <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted)" }}>No calendars selected — printout will be empty.</p>
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted)" }}>{t("noCalendarsSelected")}</p>
               )}
             </div>
 
             <div className="fld">
               <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                 <input type="checkbox" checked={includeDetails} onChange={(e) => setIncludeDetails(e.target.checked)} />
-                <span>Include location &amp; notes</span>
+                <span>{t("includeDetails")}</span>
               </label>
             </div>
 
@@ -176,9 +178,9 @@ export function PrintDialog({
 
             <div className="acts" style={{ marginTop: 18 }}>
               <span style={{ flex: 1 }} />
-              <button className="btn ghost" onClick={onClose}>Cancel</button>
+              <button className="btn ghost" onClick={onClose}>{t("cancel")}</button>
               <button className="btn primary" onClick={handlePrint} disabled={loading}>
-                <PrintIcon size={16} /> {loading ? "Preparing…" : "Print"}
+                <PrintIcon size={16} /> {loading ? t("preparing") : t("printTitle")}
               </button>
             </div>
           </div>

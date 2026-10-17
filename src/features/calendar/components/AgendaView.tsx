@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { dayKey, formatRange } from "@/lib/dates/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
 import type { CalendarSummary, EventRecord } from "../types";
+import { useAppI18n } from "@/lib/i18n";
 
 export function AgendaView({
   events,
@@ -21,6 +22,7 @@ export function AgendaView({
   onEventContextMenu?: (e: React.MouseEvent, id: string) => void;
   onEmptyContextMenu?: (e: React.MouseEvent, dateKey: string, minutes: number) => void;
 }) {
+  const { locale, t } = useAppI18n();
   const colorOf = (id: string) => calendars.find((c) => c.id === id)?.color ?? "var(--accent)";
 
   const grouped = useMemo(() => {
@@ -38,7 +40,7 @@ export function AgendaView({
     return (
       <div className="agenda" onContextMenu={(e) => { if (anchor) { e.preventDefault(); const k = formatInTimeZone(anchor, timeZone, "yyyy-MM-dd"); onEmptyContextMenu?.(e, k, 9*60); } }}>
         <div className="empty">
-          <b>Nothing planned</b>Press C or tap Create to add an event.
+          <b>{t("nothingPlanned")}</b>{t("createEventPrompt")}
         </div>
       </div>
     );
@@ -53,14 +55,14 @@ export function AgendaView({
             <div>
               <div className="dnum">{d.getDate()}</div>
               <div className="dwk">
-                {formatInTimeZone(d, timeZone, "EEE")}, {formatInTimeZone(d, timeZone, "MMM")}
+                {new Intl.DateTimeFormat(locale, { timeZone, weekday: "short", month: "short" }).format(d)}
               </div>
             </div>
             <div>
               {list.map((ev) => (
                 <button key={ev.id} className="arow" data-id={ev.id} style={{ ["--c" as string]: colorOf(ev.calendarId) } as any} onClick={() => onSelectEvent(ev.id)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onEventContextMenu?.(e, ev.id); }}>
                   <span className="sw" />
-                  <span className="tm">{ev.allDay ? "All day" : formatRange(ev.startAt, ev.endAt, timeZone)}</span>
+                  <span className="tm">{ev.allDay ? t("allDay") : formatRange(ev.startAt, ev.endAt, timeZone, "12h", locale)}</span>
                   <span>
                     <span className="ti">{ev.title}</span>
                     {ev.location && (

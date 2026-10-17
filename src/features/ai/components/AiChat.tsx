@@ -3,14 +3,16 @@ import { useRef, useState } from "react";
 import { CloseIcon } from "@/lib/icons";
 import { useSettings } from "@/lib/settings";
 import { createAttachment, isVisionModel, type ImageAttachment } from "../lib/imageAttachments";
+import { useAppI18n } from "@/lib/i18n";
 
 type Msg = { id: string; role: "user" | "assistant"; text: string; images?: string[] };
 
 export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useAppI18n();
   const { settings } = useSettings();
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([
-    { id: "0", role: "assistant", text: "Hi! I can help create events, labels and manage your calendar. Try “Create a 1h meeting tomorrow at 2pm” or attach an image of a schedule." },
+    { id: "0", role: "assistant", text: t("aiWelcome") },
   ]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const [sending, setSending] = useState(false);
@@ -25,7 +27,7 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     if (!canAttach) {
-      alert("Vision is off or model doesn't support images. Enable vision and use a vision model (e.g., llama-3.2-11b-vision-preview).");
+      alert(t("visionAttachDisabled"));
       return;
     }
     for (const f of files.slice(0, 4 - attachments.length)) {
@@ -42,11 +44,11 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
   async function send() {
     if (!input.trim() && !attachments.length) return;
     if (!settings.aiEnabled) {
-      setMsgs((m) => [...m, { id: Date.now().toString(), role: "assistant", text: "AI is disabled. Enable it in Settings → AI Assistant." }]);
+      setMsgs((m) => [...m, { id: Date.now().toString(), role: "assistant", text: t("aiDisabled") }]);
       return;
     }
     if (!fullKey) {
-      setMsgs((m) => [...m, { id: Date.now().toString(), role: "assistant", text: "Missing API key. Set it in Settings → AI Assistant (prefix + key). For Groq, get a free key at console.groq.com → API Keys." }]);
+      setMsgs((m) => [...m, { id: Date.now().toString(), role: "assistant", text: t("missingApiKey") }]);
       return;
     }
 
@@ -90,11 +92,11 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
 
   return (
     <div className="ov" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 70 }}>
-      <div className="dlg" role="dialog" aria-modal="true" aria-label="AI Assistant" style={{ maxWidth: 560, display: "flex", flexDirection: "column", maxHeight: "80vh", padding: 0, overflow: "hidden" }}>
+      <div className="dlg" role="dialog" aria-modal="true" aria-label={t("aiAssistant")} style={{ maxWidth: 560, display: "flex", flexDirection: "column", maxHeight: "80vh", padding: 0, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid var(--line)", flex: "none" }}>
-          <div style={{ fontWeight: 700, flex: 1 }}>AI Assistant {settings.aiEnabled ? "· On" : "· Off"}</div>
+          <div style={{ fontWeight: 700, flex: 1 }}>{t("aiAssistant")} {settings.aiEnabled ? `· ${t("on")}` : `· ${t("off")}`}</div>
           <span style={{ fontSize: 11, color: "var(--muted)", background: "var(--hover)", padding: "4px 8px", borderRadius: 20 }}>{settings.aiProvider} · {settings.aiModel.slice(0, 18)}</span>
-          <button className="icon" aria-label="Close" onClick={onClose}><CloseIcon /></button>
+          <button className="icon" aria-label={t("close")} onClick={onClose}><CloseIcon /></button>
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -103,12 +105,12 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
               <div>{m.text}</div>
               {m.images?.length ? (
                 <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                  {m.images.map((src, i) => <img key={i} src={src} alt="attachment" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />)}
+                  {m.images.map((src, i) => <img key={i} src={src} alt={t("attachment")} style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />)}
                 </div>
               ) : null}
             </div>
           ))}
-          {sending && <div style={{ fontSize: 12, color: "var(--muted)" }}>Thinking…</div>}
+          {sending && <div style={{ fontSize: 12, color: "var(--muted)" }}>{t("thinking")}</div>}
         </div>
 
         {attachments.length > 0 && (
@@ -119,7 +121,7 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
                 <button
                   onClick={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))}
                   style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "1px solid var(--line)", background: "var(--surface)", display: "grid", placeItems: "center", fontSize: 12, cursor: "pointer" }}
-                  aria-label="Remove"
+                  aria-label={t("remove")}
                 >
                   ×
                 </button>
@@ -133,8 +135,8 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
           <button
             className="icon"
             type="button"
-            aria-label="Attach images"
-            title={canAttach ? "Attach images (vision)" : "Enable vision + use a vision model to attach images"}
+            aria-label={t("attachImages")}
+            title={canAttach ? t("attachImagesVision") : t("enableVisionAttach")}
             onClick={() => fileRef.current?.click()}
             disabled={!canAttach}
             style={{ opacity: canAttach ? 1 : 0.4 }}
@@ -145,7 +147,7 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={canAttach ? "Ask AI or attach an image…" : "Ask AI…"}
+            placeholder={canAttach ? t("askAiOrAttach") : t("askAi")}
             style={{ flex: 1, height: 40, borderRadius: 12, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--ink)", padding: "0 12px", outline: "none" }}
           />
           <button className="btn primary" onClick={send} disabled={sending || (!input.trim() && !attachments.length)} style={{ height: 40, borderRadius: 12, padding: "0 16px" }}>
@@ -153,7 +155,7 @@ export function AiChat({ open, onClose }: { open: boolean; onClose: () => void }
           </button>
         </div>
         <div style={{ padding: "0 12px 10px", fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
-          Prefix <code style={{ background: "var(--hover)", padding: "2px 6px", borderRadius: 6 }}>{settings.aiKeyPrefix || "gsk_"}</code> shown before key in Settings. Images only for vision models.
+          {t("prefixShown")} <code style={{ background: "var(--hover)", padding: "2px 6px", borderRadius: 6 }}>{settings.aiKeyPrefix || "gsk_"}</code> {t("aiFooter")}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { dayKey } from "@/lib/dates/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
+import { useAppI18n } from "@/lib/i18n";
 
 export function MiniCalendar({
   anchor,
@@ -22,9 +23,12 @@ export function MiniCalendar({
   selectedRange: [string, string];
   weekStart?: "monday" | "sunday";
 }) {
-  const weekdays = weekStart === "sunday" ? ["S", "M", "T", "W", "T", "F", "S"] : ["M", "T", "W", "T", "F", "S", "S"];
+  const { locale, t } = useAppI18n();
+  const weekdays = (weekStart === "sunday" ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 0]).map((weekday) =>
+    new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(new Date(2024, 0, 7 + weekday))
+  );
   const { monthLabel, cells, todayKey } = useMemo(() => {
-    const label = formatInTimeZone(anchor, timeZone, "MMMM yyyy");
+    const label = new Intl.DateTimeFormat(locale, { timeZone, month: "long", year: "numeric" }).format(anchor);
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
     const start = new Date(first);
     const dow = weekStart === "sunday" ? first.getDay() : (first.getDay() + 6) % 7;
@@ -49,8 +53,8 @@ export function MiniCalendar({
       <div className="mini-h">
         <b>{monthLabel}</b>
         <span>
-          <button className="icon" aria-label="Previous month" onClick={onPrev}>‹</button>
-          <button className="icon" aria-label="Next month" onClick={onNext}>›</button>
+          <button className="icon" aria-label={t("previousMonth")} onClick={onPrev}>‹</button>
+          <button className="icon" aria-label={t("nextMonth")} onClick={onNext}>›</button>
         </span>
       </div>
       <div className="mgrid">

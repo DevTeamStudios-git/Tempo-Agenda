@@ -118,12 +118,28 @@ export function formatClock(isoInstant: string, timeZone: string): string {
   return formatInTimeZone(new Date(isoInstant), timeZone, "h:mm a");
 }
 
-export function formatClockWithFormat(isoInstant: string, timeZone: string, timeFormat: "12h" | "24h" = "12h"): string {
-  return formatInTimeZone(new Date(isoInstant), timeZone, timeFormat === "24h" ? "HH:mm" : "h:mm a");
+export function formatClockWithFormat(
+  isoInstant: string,
+  timeZone: string,
+  timeFormat: "12h" | "24h" = "12h",
+  locale = "en-US",
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: timeFormat === "12h",
+  }).format(new Date(isoInstant));
 }
 
-export function formatRange(startIso: string, endIso: string, timeZone: string, timeFormat: "12h" | "24h" = "12h"): string {
-  return `${formatClockWithFormat(startIso, timeZone, timeFormat)} – ${formatClockWithFormat(endIso, timeZone, timeFormat)}`;
+export function formatRange(
+  startIso: string,
+  endIso: string,
+  timeZone: string,
+  timeFormat: "12h" | "24h" = "12h",
+  locale = "en-US",
+): string {
+  return `${formatClockWithFormat(startIso, timeZone, timeFormat, locale)} – ${formatClockWithFormat(endIso, timeZone, timeFormat, locale)}`;
 }
 
 export function titleForView(anchor: Date, view: "day" | "week" | "month" | "agenda", timeZone: string, weekStart: "monday" | "sunday" = "monday"): string {

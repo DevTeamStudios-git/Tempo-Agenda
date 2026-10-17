@@ -16,6 +16,7 @@ import { SearchIcon, CalendarJumpIcon, ArrowRightIcon, CloseIcon } from "@/lib/i
 import { formatRange, dayKey } from "@/lib/dates/date-utils";
 import { parseDateQuery, type DateMatch } from "../lib/search-date-parse";
 import type { CalendarSummary, EventRecord } from "../types";
+import { useAppI18n } from "@/lib/i18n";
 
 export function GlobalSearch({
   value,
@@ -36,6 +37,7 @@ export function GlobalSearch({
   onJumpToDay: (dateKey: string) => void;
   onJumpToEvent: (event: EventRecord) => void;
 }) {
+  const { locale, t } = useAppI18n();
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<EventRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,8 +130,8 @@ export function GlobalSearch({
           ref={inputRef}
           id="global-search-input"
           type="search"
-          placeholder="Search events and days"
-          aria-label="Search events and days"
+          placeholder={t("searchEventsAndDays")}
+          aria-label={t("searchEventsAndDays")}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => { if (value.trim()) setOpen(true); }}
@@ -141,7 +143,7 @@ export function GlobalSearch({
         {value && (
           <button
             type="button"
-            aria-label="Clear search"
+            aria-label={t("clearSearch")}
             className="gsearch-clear"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => { onChange(""); setOpen(false); inputRef.current?.focus(); }}
@@ -155,7 +157,7 @@ export function GlobalSearch({
         <div className="gsearch-drop" id="gsearch-listbox" role="listbox">
           {dateMatches.length > 0 && (
             <div className="gsearch-section">
-              <div className="gsearch-label">Days</div>
+              <div className="gsearch-label">{t("days")}</div>
               {dateMatches.map((d, i) => (
                 <button
                   key={d.dateKey}
@@ -167,7 +169,7 @@ export function GlobalSearch({
                   onClick={() => selectDay(d)}
                 >
                   <CalendarJumpIcon size={16} style={{ color: "var(--accent)", flex: "none" }} />
-                  <span className="gsearch-title">Jump to {d.label}</span>
+                  <span className="gsearch-title">{t("jumpTo")} {d.label}</span>
                   <ArrowRightIcon size={14} style={{ color: "var(--muted)", flex: "none" }} />
                 </button>
               ))}
@@ -175,9 +177,9 @@ export function GlobalSearch({
           )}
 
           <div className="gsearch-section">
-            <div className="gsearch-label">Events{loading ? " — searching…" : ""}</div>
+            <div className="gsearch-label">{t("events")}{loading ? " — " + t("searching") : ""}</div>
             {!loading && results.length === 0 && (
-              <p className="gsearch-empty">No matching events.</p>
+              <p className="gsearch-empty">{t("noMatchingEvents")}</p>
             )}
             {results.map((ev, i) => {
               const idx = dateMatches.length + i;
@@ -198,8 +200,8 @@ export function GlobalSearch({
                     <span className="gsearch-title">{ev.title || "(No title)"}</span>
                     <span className="gsearch-sub">
                       {dayKey(ev.startAt, timeZone) === dayKey(ev.endAt, timeZone) || ev.allDay
-                        ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(new Date(ev.startAt))
-                        : `${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ev.startAt))} – ${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ev.endAt))}`}
+                        ? new Intl.DateTimeFormat(locale, { timeZone, weekday: "short", month: "short", day: "numeric" }).format(new Date(ev.startAt))
+                        : `${new Intl.DateTimeFormat(locale, { timeZone, month: "short", day: "numeric" }).format(new Date(ev.startAt))} – ${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ev.endAt))}`}
                       {!ev.allDay ? ` · ${formatRange(ev.startAt, ev.endAt, timeZone)}` : " · All day"}
                       {ev.location ? ` · ${ev.location}` : ""}
                     </span>

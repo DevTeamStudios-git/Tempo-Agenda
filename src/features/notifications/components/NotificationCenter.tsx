@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BellIcon, CloseIcon } from "@/lib/icons";
-import { formatInTimeZone } from "date-fns-tz";
+import { useAppI18n } from "@/lib/i18n";
 
 type Notification = {
   id: string;
@@ -21,6 +21,7 @@ async function fetchNotifications(workspaceId: string): Promise<{ items: Notific
 }
 
 export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
+  const { locale, t } = useAppI18n();
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -51,8 +52,8 @@ export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
     <div style={{ position: "relative" }}>
       <button
         className="icon"
-        aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`}
-        title="Notifications"
+        aria-label={`${t("notifications")}${unread ? ` (${unread} ${t("unread")})` : ""}`}
+        title={t("notifications")}
         onClick={() => setOpen((v) => !v)}
         style={{ position: "relative" }}
       >
@@ -90,7 +91,7 @@ export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
           />
           <div
             role="dialog"
-            aria-label="Notifications"
+            aria-label={t("notifications")}
             style={{
               position: "absolute",
               top: "calc(100% + 8px)",
@@ -109,7 +110,7 @@ export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 12px 8px", borderBottom: "1px solid var(--line)", flex: "none" }}>
               <BellIcon size={16} />
-              <span style={{ fontWeight: 700, flex: 1 }}>Notifications</span>
+              <span style={{ fontWeight: 700, flex: 1 }}>{t("notifications")}</span>
               {unread > 0 && (
                 <button
                   onClick={() => markAllRead.mutate()}
@@ -119,7 +120,7 @@ export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
                   Mark all read
                 </button>
               )}
-              <button className="icon" aria-label="Close" onClick={() => setOpen(false)} style={{ width: 28, height: 28 }}>
+              <button className="icon" aria-label={t("close")} onClick={() => setOpen(false)} style={{ width: 28, height: 28 }}>
                 <CloseIcon size={14} />
               </button>
             </div>
@@ -128,8 +129,8 @@ export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
               {items.length === 0 ? (
                 <div style={{ padding: 24, textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>🔔</div>
-                  No notifications — you’re all caught up.
-                  <div style={{ marginTop: 8, fontSize: 11 }}>Reminders and invites will appear here. Enable push in Settings → Notifications for lock-screen alerts.</div>
+                  {t("noNotifications")}
+                  <div style={{ marginTop: 8, fontSize: 11 }}>{t("notificationsEmptyBody")}</div>
                 </div>
               ) : (
                 items.map((n) => (
@@ -147,7 +148,7 @@ export function NotificationCenter({ workspaceId }: { workspaceId: string }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 13, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n.title}</div>
                       {n.body && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.3 }}>{n.body}</div>}
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{formatInTimeZone(new Date(n.createdAt), "UTC", "MMM d, h:mm a")}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{new Intl.DateTimeFormat(locale, { timeZone: "UTC", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(n.createdAt))}</div>
                     </div>
                   </div>
                 ))

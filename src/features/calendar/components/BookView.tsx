@@ -5,6 +5,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import type { CalendarSummary, EventRecord } from "../types";
 import { useSettings } from "@/lib/settings";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/lib/icons";
+import { useAppI18n } from "@/lib/i18n";
 
 export function BookView({
   anchor,
@@ -30,6 +31,7 @@ export function BookView({
   onJumpToDate: (iso: string) => void;
 }) {
   const { settings } = useSettings();
+  const { locale, t } = useAppI18n();
   const [animDir, setAnimDir] = useState<"left" | "right" | null>(null);
   const [dragX, setDragX] = useState(0);
   const dragRef = useRef<{ startX: number; dragging: boolean } | null>(null);
@@ -92,8 +94,8 @@ export function BookView({
   const renderPage = (date: Date, key: string) => {
     const list = eventsByDay.get(key) ?? [];
     const isToday = key === formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd");
-    const dayLabel = formatInTimeZone(date, timeZone, "EEEE");
-    const dateLabel = formatInTimeZone(date, timeZone, "MMMM d, yyyy");
+    const dayLabel = new Intl.DateTimeFormat(locale, { timeZone, weekday: "long" }).format(date);
+    const dateLabel = new Intl.DateTimeFormat(locale, { timeZone, month: "long", day: "numeric", year: "numeric" }).format(date);
     return (
       <div className={`book-page${isToday ? " today" : ""}`} data-date={key} onClick={(e) => {
         if ((e.target as HTMLElement).closest(".book-ev")) return;
@@ -105,7 +107,7 @@ export function BookView({
         <div className="book-page-head">
           <span className="book-dayname">{dayLabel}</span>
           <span className="book-datename">{dateLabel}</span>
-          {isToday && <span className="book-today-badge">Today</span>}
+          {isToday && <span className="book-today-badge">{t("today")}</span>}
         </div>
         <div className="book-timeline">
           {Array.from({ length: 13 }, (_, i) => i * 2).map((h) => (
@@ -132,7 +134,7 @@ export function BookView({
             const h = Math.max(22, ((eMin - sMin) * 48) / 60 - 2);
             return (
               <button key={ev.id} className="book-ev" style={{ top, height: h, ["--c" as string]: colorOf(ev.calendarId) } as any} onClick={(e) => { e.stopPropagation(); onSelectEvent(ev.id); }}>
-                <span className="book-ev-time">{formatClockWithFormat(ev.startAt, timeZone, settings.timeFormat)} – {formatClockWithFormat(ev.endAt, timeZone, settings.timeFormat)}</span>
+                <span className="book-ev-time">{formatClockWithFormat(ev.startAt, timeZone, settings.timeFormat, locale)} – {formatClockWithFormat(ev.endAt, timeZone, settings.timeFormat, locale)}</span>
                 <span className="book-ev-title">{ev.title}</span>
                 {ev.location && h > 44 && <span className="book-ev-loc">{ev.location}</span>}
               </button>
@@ -153,12 +155,12 @@ export function BookView({
   return (
     <div className="book-wrap">
       <div className="book-nav">
-        <button className="book-nav-btn" aria-label="Previous page" onClick={triggerPrev} type="button"><ChevronLeftIcon size={16} /></button>
-        <button className="btn ghost" onClick={onGoToday} style={{ height: 32, padding: "0 12px" }} type="button">Today</button>
+        <button className="book-nav-btn" aria-label={t("previousPage")} onClick={triggerPrev} type="button"><ChevronLeftIcon size={16} /></button>
+        <button className="btn ghost" onClick={onGoToday} style={{ height: 32, padding: "0 12px" }} type="button">{t("today")}</button>
         <label className="book-jump">
-          <input type="date" value={leftKey} onChange={(e) => e.target.value && onJumpToDate(e.target.value)} aria-label="Jump to date" />
+          <input type="date" value={leftKey} onChange={(e) => e.target.value && onJumpToDate(e.target.value)} aria-label={t("jumpToDate")} />
         </label>
-        <button className="book-nav-btn" aria-label="Next page" onClick={triggerNext} type="button"><ChevronRightIcon size={16} /></button>
+        <button className="book-nav-btn" aria-label={t("nextPage")} onClick={triggerNext} type="button"><ChevronRightIcon size={16} /></button>
       </div>
       <div
         className={`book-spread${animDir ? ` turning-${animDir}` : ""}`}
@@ -171,7 +173,7 @@ export function BookView({
         {renderPage(leftDate, leftKey)}
         {renderPage(rightDate, rightKey)}
       </div>
-      <div className="book-hint">← Drag or swipe to turn page → &nbsp;·&nbsp; Use ←/→ or J/K to navigate &nbsp;·&nbsp; Press T for Today</div>
+      <div className="book-hint">← {t("dragOrSwipe")} → &nbsp;·&nbsp; {t("useArrows")} &nbsp;·&nbsp; {t("pressT")}</div>
     </div>
   );
 }

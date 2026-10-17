@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import { dayKey } from "@/lib/dates/date-utils";
 import type { CalendarSummary, EventRecord } from "../types";
+import { useAppI18n } from "@/lib/i18n";
 
 export function YearView({
   anchor,
@@ -17,6 +18,7 @@ export function YearView({
   timeZone: string;
   onSelectDate: (iso: string) => void;
 }) {
+  const { locale, t } = useAppI18n();
   const year = formatInTimeZone(anchor, timeZone, "yyyy");
   const yearNum = Number(year);
 
@@ -63,12 +65,12 @@ export function YearView({
       <div className="year-head">{year}</div>
       <div className="year-grid">
         {months.map(({ mi, first, cells }) => {
-          const name = formatInTimeZone(first, timeZone, "MMMM");
+          const name = new Intl.DateTimeFormat(locale, { timeZone, month: "long" }).format(first);
           return (
             <div key={mi} className="year-month">
               <div className="year-month-name">{name}</div>
               <div className="year-weekdays">
-                {["M","T","W","T","F","S","S"].map((d,i) => <span key={i}>{d}</span>)}
+                {Array.from({ length: 7 }, (_, i) => i).map((offset) => <span key={offset}>{new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(new Date(2024, 0, 1 + offset))}</span>)}
               </div>
               <div className="year-cells">
                 {cells.slice(0, 35).map((d) => {
@@ -84,7 +86,7 @@ export function YearView({
                       className={`year-cell${isOut ? " out" : ""}${isToday ? " today" : ""} dens-${intensity}`}
                       onClick={() => onSelectDate(k)}
                       style={{ ["--c" as string]: col } as any}
-                      title={`${k}${cnt ? ` · ${cnt} event(s)` : ""}`}
+                      title={`${k}${cnt ? ` · ${cnt} ${locale.startsWith("fr") ? "événement(s)" : "event(s)"}` : ""}`}
                     >
                       <span>{d.getDate()}</span>
                       {cnt > 0 && <i />}
@@ -97,7 +99,7 @@ export function YearView({
         })}
       </div>
       <div className="year-legend" style={{ padding: "8px 4px", fontSize: 11, color: "var(--muted)", display: "flex", gap: 8, alignItems: "center" }}>
-        <span>Event density:</span>
+        <span>{t("eventDensity")}</span>
         <span style={{ display:"inline-flex", gap:4, alignItems:"center" }}><i style={{ width:8,height:8,borderRadius:"50%",background:"var(--line)",display:"inline-block"}}/> none</span>
         <span style={{ display:"inline-flex", gap:4, alignItems:"center" }}><i style={{ width:8,height:8,borderRadius:"50%",background:"color-mix(in srgb, var(--accent) 30%, transparent)",display:"inline-block"}}/> 1</span>
         <span style={{ display:"inline-flex", gap:4, alignItems:"center" }}><i style={{ width:8,height:8,borderRadius:"50%",background:"color-mix(in srgb, var(--accent) 60%, transparent)",display:"inline-block"}}/> 2-3</span>

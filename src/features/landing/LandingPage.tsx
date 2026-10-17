@@ -200,10 +200,12 @@ export function LandingPage() {
         .landing-dev-toggle.on .landing-dev-switch::after { transform: translateX(11px); background: #fff; }
         .landing-signin { color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); border-radius: 11px; padding: 10px 14px; font-weight: 700; font-size: 13px; transition: .18s ease; backdrop-filter: blur(14px); }
         .landing-signin:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22); }
-        .landing-hero { padding: 78px 0 58px; display: grid; grid-template-columns: minmax(0, 1.03fr) minmax(0, .97fr); gap: 54px; align-items: center; }
+        .landing-hero { padding: 78px 0 58px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(460px, .94fr); gap: 64px; align-items: center; }
+        .landing-hero > :first-child { min-width: 0; position: relative; z-index: 2; }
+        .landing-hero > :last-child { min-width: 0; position: relative; z-index: 1; }
         .landing-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: #b9c3dc; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.045); border-radius: 999px; padding: 8px 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
         .landing-eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: #6f9cff; box-shadow: 0 0 16px rgba(111,156,255,.8); }
-        .landing-title { margin: 18px 0 0; max-width: 730px; font: 700 clamp(46px, 6vw, 78px)/.98 var(--font-display); letter-spacing: -.055em; }
+        .landing-title { margin: 18px 0 0; max-width: 620px; font: 700 clamp(44px, 5.5vw, 70px)/.98 var(--font-display); letter-spacing: -.055em; text-wrap: balance; overflow-wrap: normal; }
         .landing-title span { background: linear-gradient(100deg, #dfe5ff 8%, #9f9bff 44%, #6ba9ff 86%); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .landing-copy { margin: 22px 0 0; max-width: 620px; color: #aeb8ce; font-size: 17px; line-height: 1.65; }
         .landing-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
@@ -277,7 +279,11 @@ export function LandingPage() {
         .editor-feature { display: grid; grid-template-columns: 90px 1fr; gap: 9px; margin-top: 10px; }
         .editor-feature textarea { min-height: 62px; }
         .editor-note { color: #6f7a93; font-size: 11px; margin-top: 8px; line-height: 1.5; }
-        @media (max-width: 980px) { .landing-hero { grid-template-columns: 1fr; } .landing-product { min-height: 380px; } .landing-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+        @media (max-width: 1100px) {
+          .landing-hero { grid-template-columns: minmax(0, 1fr) minmax(400px, .88fr); gap: 42px; }
+          .landing-title { max-width: 570px; }
+        }
+        @media (max-width: 980px) { .landing-hero { grid-template-columns: 1fr; } .landing-product { min-height: 380px; } .landing-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .landing-title { max-width: 760px; } }
         @media (max-width: 760px) { .landing-nav-links { display: none; } .landing-top-actions { margin-left: auto; } .landing-dev-toggle span.label { display: none; } .editor-grid { grid-template-columns: 1fr; } .editor-full { grid-column: auto; } .editor-feature { grid-template-columns: 1fr; } }
         @media (max-width: 680px) { .landing-shell { width: min(100% - 24px, 1180px); } .landing-nav { height: 66px; gap: 8px; } .landing-brand { margin-right: auto; } .landing-hero { padding: 54px 0 34px; gap: 22px; } .landing-title { font-size: clamp(42px, 13vw, 60px); } .landing-copy { font-size: 15px; } .landing-product { min-height: 300px; } .landing-dashboard { transform: none; } .landing-dashboard-body { grid-template-columns: 92px 1fr; min-height: 270px; } .landing-side { padding: 11px 8px; } .landing-calendar { padding: 12px 10px; } .landing-week { grid-template-columns: 32px repeat(5,1fr); } .landing-grid { grid-template-columns: 1fr; } .landing-bottom { flex-direction: column; align-items: flex-start; } .landing-footer { flex-direction: column; } .landing-language { display: none; } }
       `}</style>

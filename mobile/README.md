@@ -19,3 +19,7 @@ npm run typecheck checks native TypeScript. npm run build:android-debug creates 
 The web app provides the remaining advanced features, including imports/exports, tasks, notebooks, printing and invitation links. They are not yet native screens.
 
 Metro is installed locally by npm ci. From the repository root run npm run mobile:install, then npm run mobile:start; keep that terminal open and run npm run mobile:android in a second terminal. Vercel serves the web/API; Metro is only used for local native development.
+
+## Android SDK detection
+
+The Android run/build scripts detect ANDROID_HOME, ANDROID_SDK_ROOT, android/local.properties, and the standard SDK location for Windows/macOS/Linux. They configure the child process environment and write the ignored local.properties file, so a new terminal does not need manual SDK environment settings. Run npm run android:setup inside mobile to inspect/configure detection. If no device is connected, configure an AVD in Android Studio Device Manager, or connect an Android phone with USB debugging enabled.

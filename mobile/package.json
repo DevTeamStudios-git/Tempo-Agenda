@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "start": "react-native start",
-    "android": "react-native run-android",
+    "android": "node scripts/android-run.cjs",
     "ios": "react-native run-ios",
     "lint": "node scripts/lint.cjs",
     "typecheck": "tsc --noEmit",
     "build:android-debug": "node scripts/android-build.cjs",
     "build:android-release": "node scripts/android-build.cjs release",
-    "bundle": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output dist/index.android.bundle --assets-dest dist/assets --max-workers 2"
+    "bundle": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output dist/index.android.bundle --assets-dest dist/assets --max-workers 2",
+    "android:setup": "node scripts/android-environment.cjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.0",

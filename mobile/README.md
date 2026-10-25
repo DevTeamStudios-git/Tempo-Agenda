@@ -17,3 +17,5 @@ Implemented: email/password sign-in and sign-up, calendar visibility, month and 
 npm run typecheck checks native TypeScript. npm run build:android-debug creates android/app/build/outputs/apk/debug/app-debug.apk; Metro must be running for this development build. Release signing must be configured with your own private key. iOS builds require macOS/Xcode and have not been validated on this Windows host.
 
 The web app provides the remaining advanced features, including imports/exports, tasks, notebooks, printing and invitation links. They are not yet native screens.
+
+Metro is installed locally by npm ci. From the repository root run npm run mobile:install, then npm run mobile:start; keep that terminal open and run npm run mobile:android in a second terminal. Vercel serves the web/API; Metro is only used for local native development.

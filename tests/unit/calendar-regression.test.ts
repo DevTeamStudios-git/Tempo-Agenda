@@ -1,0 +1,23 @@
+import {describe,it,expect} from "vitest";
+import {expandEvents,validateRule,excludeOccurrence} from "@/lib/recurrence/engine";
+import {startOfWeek,addDays,addMonths,dayKey} from "@/lib/dates/date-utils";
+import {eventInputSchema,eventInputPartialSchema} from "@/features/events/validation/event-schema";
+import {parseIcs,serializeIcs} from "@/lib/ics/ical";
+import type {EventRecord} from "@/features/calendar/types";
+const base:EventRecord={id:"test",calendarId:"work",title:"Weekly sync",description:"Notes",location:"Room",startAt:"2026-03-02T14:00:00.000Z",endAt:"2026-03-02T15:00:00.000Z",timezone:"America/Toronto",allDay:false,status:"confirmed",labels:[],recurrence:{rrule:"FREQ=WEEKLY;COUNT=3"}};
+describe("calendar regression",()=>{
+ it("does not apply defaults to omitted PATCH fields",()=>expect(eventInputPartialSchema.parse({title:"changed"})).toEqual({title:"changed"}));
+ it("keeps 9 AM local through DST",()=>{const events=expandEvents([base],new Date("2026-03-01"),new Date("2026-04-01"));expect(events.map(e=>e.startAt)).toEqual(["2026-03-02T14:00:00.000Z","2026-03-09T13:00:00.000Z","2026-03-16T13:00:00.000Z"]);});
+ it("counts from series origin, not requested window",()=>expect(expandEvents([base],new Date("2026-04-01"),new Date("2026-05-01"))).toEqual([]));
+ it("does not extend COUNT after exclusions",()=>{const event={...base,recurrence:{rrule:excludeOccurrence(base.recurrence!.rrule,"2026-03-09T13:00:00Z")}};expect(expandEvents([event],new Date("2026-03-01"),new Date("2026-04-01"))).toHaveLength(2);});
+ it("expands ordinal weekdays",()=>{const events=expandEvents([{...base,recurrence:{rrule:"FREQ=MONTHLY;BYDAY=2MO;COUNT=2"}}],new Date("2026-03-01"),new Date("2026-05-01"));expect(events.map(e=>dayKey(e.startAt,base.timezone))).toEqual(["2026-03-09","2026-04-13"]);});
+ it("includes occurrences overlapping window start",()=>{const event={...base,endAt:"2026-03-04T15:00:00Z"};expect(expandEvents([event],new Date("2026-03-03"),new Date("2026-03-04"))).toHaveLength(1);});
+ it("uses a half-open range",()=>expect(expandEvents([base],new Date("2026-03-01"),new Date(base.startAt))).toHaveLength(0));
+ it("rejects invalid recurrence",()=>{expect(validateRule("FREQ=SECONDLY")).toBe(false);expect(validateRule("FREQ=DAILY;INTERVAL=0")).toBe(false);expect(validateRule("FREQ=DAILY;COUNT=2;UNTIL=20261231T000000Z")).toBe(false);});
+ it.each(["Pacific/Kiritimati","America/Los_Angeles","Asia/Tokyo"])("calculates week in %s independently of host",zone=>{const anchor=new Date("2026-10-25T03:00:00Z");const week=startOfWeek(anchor,zone);expect(new Intl.DateTimeFormat("en",{timeZone:zone,weekday:"long"}).format(week)).toBe("Monday");expect(dayKey(addDays(week,7,zone).toISOString(),zone)).not.toBe(dayKey(week.toISOString(),zone));expect(dayKey(addMonths(anchor,1,zone).toISOString(),zone)).toMatch(/^2026-11-01$/);});
+ it("rejects reversed all-day dates",()=>expect(eventInputSchema.safeParse({...base,allDay:true,endAt:"2026-03-01T00:00:00Z"}).success).toBe(false));
+ it("rejects invalid timezones and unsafe meeting URLs",()=>{expect(eventInputSchema.safeParse({...base,timezone:"not/a-zone"}).success).toBe(false);expect(eventInputSchema.safeParse({...base,conferenceUrl:"javascript:alert(1)"}).success).toBe(false);});
+ it("round-trips all-day across UTC offsets",()=>{for(const timezone of ["Asia/Tokyo","America/Toronto"]){const e={...base,timezone,allDay:true,startAt:timezone==="Asia/Tokyo"?"2026-03-01T15:00:00Z":"2026-03-02T05:00:00Z",endAt:timezone==="Asia/Tokyo"?"2026-03-03T15:00:00Z":"2026-03-04T05:00:00Z",recurrence:null};const result=parseIcs(serializeIcs([e],[]),timezone).events[0]!;expect(result.startAt).toBe(new Date(e.startAt).toISOString());expect(result.endAt).toBe(new Date(e.endAt).toISOString());}});
+ it("folds unicode at byte boundaries",()=>{const content=serializeIcs([{...base,title:"📅".repeat(70),recurrence:null}],[]);expect(content.split("\r\n").every(l=>new TextEncoder().encode(l).length<=75)).toBe(true);expect(parseIcs(content).events[0]!.title).toBe("📅".repeat(70));});
+ it("ignores alarm properties when importing event",()=>{const text="BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Event\nDTSTART:20261024T120000Z\nBEGIN:VALARM\nSUMMARY:Reminder\nEND:VALARM\nEND:VEVENT\nEND:VCALENDAR";expect(parseIcs(text).events[0]!.title).toBe("Event");});
+});

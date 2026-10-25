@@ -38,7 +38,7 @@ export function useReminderNotifier(events: EventRecord[], workspaceId: string) 
         if (ev.allDay) continue;
         const start = new Date(ev.startAt).getTime();
         // Default reminder 15 min before, or from settings
-        const mins = [15]; // could be from event.reminders
+        const mins = ev.reminders ?? [15];
         for (const m of mins) {
           const triggerAt = start - m * 60 * 1000;
           const windowEnd = triggerAt + 60 * 1000; // 1 min window
@@ -60,7 +60,8 @@ export function useReminderNotifier(events: EventRecord[], workspaceId: string) 
                   type: "event_reminder",
                   title: `Upcoming: ${ev.title}`,
                   body: `Starts in ${m} minutes${ev.location ? ` · ${ev.location}` : ""}`,
-                  eventId: ev.id,
+                  eventId: ev.occurrenceOf?.seriesId ?? ev.id,
+                  reminderAt:ev.startAt, minutesBefore:m,
                 }),
               }).catch(() => {});
             } catch {}

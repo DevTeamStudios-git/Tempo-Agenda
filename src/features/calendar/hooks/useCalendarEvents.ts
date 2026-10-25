@@ -40,7 +40,7 @@ async function fetchEvents(args: RangeArgs): Promise<EventRecord[]> {
 }
 
 export function useCalendarEvents(args: RangeArgs) {
-  return useQuery({ queryKey: rangeKey(args), queryFn: () => fetchEvents(args) });
+  return useQuery({ queryKey: rangeKey(args), queryFn: () => fetchEvents(args), refetchInterval: 30_000 });
 }
 
 export function useEventMutations(args: RangeArgs) {
@@ -49,16 +49,16 @@ export function useEventMutations(args: RangeArgs) {
 
   const create = useMutation({
     mutationFn: async (draft: EventDraft) => {
-      const res = await fetch("/api/events", { method: "POST", body: JSON.stringify(draft) });
+      const res = await fetch("/api/events", { method: "POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(draft) });
       if (!res.ok) await readApiError(res);
       return (await res.json()).event as EventRecord;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...draft }: EventDraft & { id: string }) => {
-      const res = await fetch(`/api/events/${id}`, { method: "PATCH", body: JSON.stringify(draft) });
+    mutationFn: async ({ id, editScope, ...draft }: EventDraft & { id: string }) => {
+      const res = await fetch(`/api/events/${encodeURIComponent(id)}?scope=${editScope ?? "this"}`, { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify(draft) });
       if (!res.ok) await readApiError(res);
       return (await res.json()).event as EventRecord;
     },
@@ -74,12 +74,12 @@ export function useEventMutations(args: RangeArgs) {
     onError: (_err, _draft, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 
   const moveOrResize = useMutation({
     mutationFn: async ({ id, startAt, endAt }: { id: string; startAt: string; endAt: string }) => {
-      const res = await fetch(`/api/events/${id}`, { method: "PATCH", body: JSON.stringify({ startAt, endAt }) });
+      const res = await fetch(`/api/events/${id}`, { method: "PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ startAt, endAt }) });
       if (!res.ok) await readApiError(res);
       return (await res.json()).event as EventRecord;
     },
@@ -94,7 +94,7 @@ export function useEventMutations(args: RangeArgs) {
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 
   const remove = useMutation({
@@ -105,13 +105,13 @@ export function useEventMutations(args: RangeArgs) {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<EventRecord[]>(key);
-      queryClient.setQueryData<EventRecord[]>(key, (old) => old?.filter((e) => e.id !== id));
+      queryClient.setQueryData<EventRecord[]>(key, (old) => old?.filter((e) => e.id !== id.split("?")[0]));
       return { previous };
     },
     onError: (_err, _id, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 
   const restore = useMutation({
@@ -120,7 +120,7 @@ export function useEventMutations(args: RangeArgs) {
       if (!res.ok) await readApiError(res);
       return (await res.json()).event as EventRecord;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 
   return { create, update, moveOrResize, remove, restore };

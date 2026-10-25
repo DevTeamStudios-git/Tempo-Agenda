@@ -1,3 +1,4 @@
+import {synchronizeGuests} from "@/server/services/invitation-service";
 /**
  * Data access only. No authorization decisions live here — the service layer
  * decides *whether* a query is allowed; the repository just runs it, always
@@ -27,12 +28,13 @@ export const eventRepository = {
       where: {
         deletedAt: null,
         startAt: { lt: rangeEnd },
-        endAt: { gt: rangeStart },
+        AND: [{ OR: [{ endAt: { gt: rangeStart } }, { allDay: true, endAt: { gte: rangeStart } }, { recurrenceRule: { isNot: null } }] }],
         calendar: {
-          workspaceId,
+          workspaceId,deletedAt:null,
           ...(calendarIds && calendarIds.length > 0 ? { id: { in: calendarIds } } : calendarIds && calendarIds.length === 0 ? { id: { in: [] } } : {}),
         },
       },
+      include: { recurrenceRule: true, reminders: true, attendees:true },
       orderBy: { startAt: "asc" },
     });
   },
@@ -45,9 +47,9 @@ export const eventRepository = {
       where: {
         deletedAt: null,
         startAt: { lt: rangeEnd },
-        endAt: { gt: rangeStart },
+        AND: [{ OR: [{ endAt: { gt: rangeStart } }, { allDay: true, endAt: { gte: rangeStart } }, { recurrenceRule: { isNot: null } }] }],
         calendar: {
-          workspaceId,
+          workspaceId,deletedAt:null,
           ...(calendarIds && calendarIds.length > 0 ? { id: { in: calendarIds } } : calendarIds && calendarIds.length === 0 ? { id: { in: [] } } : {}),
         },
         OR: [
@@ -56,6 +58,7 @@ export const eventRepository = {
           { location: { contains: q, mode: "insensitive" } },
         ],
       },
+      include: { recurrenceRule: true, reminders: true, attendees:true },
       orderBy: { startAt: "asc" },
     });
   },
@@ -66,67 +69,53 @@ export const eventRepository = {
    * Ordered by absolute distance from `now` so nearby events surface first.
    */
   async searchGlobal({ workspaceId, calendarIds, query, limit = 20 }: { workspaceId: string; calendarIds?: string[]; query: string; limit?: number }) {
-    const q = query.trim();
-    if (!q) return [];
-    const rows = await prisma.event.findMany({
-      where: {
-        deletedAt: null,
-        calendar: {
-          workspaceId,
-          ...(calendarIds && calendarIds.length > 0 ? { id: { in: calendarIds } } : calendarIds && calendarIds.length === 0 ? { id: { in: [] } } : {}),
-        },
-        OR: [
-          { title: { contains: q, mode: "insensitive" } },
-          { description: { contains: q, mode: "insensitive" } },
-          { location: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      orderBy: { startAt: "asc" },
-      take: 200, // cap the scan; re-sorted by recency-to-now below, then trimmed to `limit`
-    });
-    const now = Date.now();
-    return rows
-      .sort((a: { startAt: Date }, b: { startAt: Date }) => Math.abs(a.startAt.getTime() - now) - Math.abs(b.startAt.getTime() - now))
-      .slice(0, limit);
+    const q=query.trim();if(!q)return [];
+    const where={deletedAt:null,calendar:{workspaceId,deletedAt:null,...(calendarIds?{id:{in:calendarIds}}:{})},OR:[{title:{contains:q,mode:"insensitive" as const}},{description:{contains:q,mode:"insensitive" as const}},{location:{contains:q,mode:"insensitive" as const}}]};
+    const now=new Date(),take=Math.max(1,Math.min(50,Math.floor(limit)));
+    const [future,past]=await Promise.all([
+      prisma.event.findMany({where:{...where,startAt:{gte:now}},include:{recurrenceRule:true,reminders:true,attendees:true},orderBy:{startAt:"asc"},take}),
+      prisma.event.findMany({where:{...where,startAt:{lt:now}},include:{recurrenceRule:true,reminders:true,attendees:true},orderBy:{startAt:"desc"},take}),
+    ]);
+    return [...future,...past].sort((a,b)=>Math.abs(+a.startAt-+now)-Math.abs(+b.startAt-+now)).slice(0,take);
   },
 
   async findById(id: string) {
-    return prisma.event.findUnique({ where: { id }, include: { calendar: true } });
+    return prisma.event.findUnique({ where: { id }, include: { calendar: true, recurrenceRule: true, reminders: true, attendees:true } });
   },
 
   async findByIdInWorkspace(workspaceId: string, id: string) {
-    return prisma.event.findFirst({ where: { id, calendar: { workspaceId } }, include: { calendar: true } });
+    return prisma.event.findFirst({ where: { id, calendar: { workspaceId } }, include: { calendar: true, recurrenceRule: true, reminders: true, attendees:true } });
   },
 
   async create(createdById: string, input: EventInput) {
-    return prisma.event.create({
+    const { recurrence, reminders, guests, ...fields } = input;
+    return prisma.$transaction(async tx=>{const row=await tx.event.create({
       data: {
-        calendarId: input.calendarId,
-        createdById,
-        title: input.title,
-        description: input.description ?? "",
-        location: input.location ?? "",
-        startAt: new Date(input.startAt),
-        endAt: new Date(input.endAt),
-        timezone: input.timezone,
-        allDay: input.allDay,
-      },
+        ...fields, createdById, startAt: new Date(input.startAt), endAt: new Date(input.endAt),
+        recurrenceRule: recurrence ? { create: { rrule: recurrence.rrule, timezone: input.timezone, dtstart: new Date(input.startAt) } } : undefined,
+        reminders: reminders ? { create: reminders.map(minutesBefore=>({userId:createdById,minutesBefore,channel:"in_app" as const})) } : undefined,
+      }, include: { recurrenceRule: true, reminders: true, attendees:true },
+    });
+    if(guests)await synchronizeGuests(tx,row.id,guests);
+    return tx.event.findUniqueOrThrow({where:{id:row.id},include:{recurrenceRule:true,reminders:true,attendees:true}});
     });
   },
-
-  async update(id: string, input: Partial<EventInput>) {
-    return prisma.event.update({
-      where: { id },
-      data: {
-        ...(input.title !== undefined ? { title: input.title } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
-        ...(input.location !== undefined ? { location: input.location } : {}),
-        ...(input.startAt !== undefined ? { startAt: new Date(input.startAt) } : {}),
-        ...(input.endAt !== undefined ? { endAt: new Date(input.endAt) } : {}),
-        ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
-        ...(input.allDay !== undefined ? { allDay: input.allDay } : {}),
-        ...(input.calendarId !== undefined ? { calendarId: input.calendarId } : {}),
-      },
+  async update(id: string, input: Partial<EventInput>, userId?: string) {
+    const { recurrence, reminders, guests, ...fields } = input;
+    return prisma.$transaction(async tx => {
+      const row = await tx.event.update({ where:{id}, data:{...fields,
+        startAt:input.startAt ? new Date(input.startAt):undefined,
+        endAt:input.endAt ? new Date(input.endAt):undefined,
+      }});
+      if(guests)await synchronizeGuests(tx,id,guests);
+      if(recurrence === null) await tx.recurrenceRule.deleteMany({where:{eventId:id}});
+      else if(recurrence) await tx.recurrenceRule.upsert({where:{eventId:id},create:{eventId:id,rrule:recurrence.rrule,timezone:row.timezone,dtstart:row.startAt},update:{rrule:recurrence.rrule,timezone:row.timezone,dtstart:row.startAt}});
+      else if(input.startAt || input.timezone) await tx.recurrenceRule.updateMany({where:{eventId:id},data:{timezone:row.timezone,dtstart:row.startAt}});
+      if(reminders && userId) {
+        await tx.reminder.deleteMany({where:{eventId:id,userId}});
+        await tx.reminder.createMany({data:reminders.map(minutesBefore=>({eventId:id,userId,minutesBefore,channel:"in_app" as const}))});
+      }
+      return tx.event.findUniqueOrThrow({where:{id},include:{recurrenceRule:true,reminders:true,attendees:true}});
     });
   },
 
@@ -145,7 +134,7 @@ export const eventRepository = {
         deletedAt: null,
         allDay: true,
         calendar: {
-          workspaceId,
+          workspaceId,deletedAt:null,
           ...(calendarIds && calendarIds.length > 0 ? { id: { in: calendarIds } } : calendarIds && calendarIds.length === 0 ? { id: { in: [] } } : {}),
         },
       },

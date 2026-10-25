@@ -10,6 +10,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       mutations: { retry: 0 },
     },
   }));
-  useEffect(() => { initTheme(); }, []);
+  useEffect(() => initTheme(), []);
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

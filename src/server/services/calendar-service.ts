@@ -1,3 +1,4 @@
+import {prisma} from "@/lib/prisma/client";
 import { calendarRepository } from "@/server/repositories/calendar-repository";
 import { assertCanManageCalendar, assertWorkspaceMember, assertCanManageCalendarsInWorkspace } from "./workspace-service";
 import { toCssColorValue } from "@/lib/calendar-colors";
@@ -22,3 +23,10 @@ export async function updateCalendar(userId: string, calendarId: string, input: 
   const row = await calendarRepository.update(calendarId, input);
   return { ...row, color: toCssColorValue(row.color) };
 }
+
+export async function deleteCalendar(userId:string,calendarId:string){
+ const cal=await assertCanManageCalendar(userId,calendarId);
+ await prisma.$transaction(async tx=>{await tx.calendar.update({where:{id:calendarId},data:{deletedAt:new Date(),isArchived:true,isDefault:false}});if(cal.isDefault){const next=await tx.calendar.findFirst({where:{workspaceId:cal.workspaceId,deletedAt:null,isArchived:false},orderBy:{createdAt:"asc"}});if(next)await tx.calendar.update({where:{id:next.id},data:{isDefault:true}});}});
+}
+export async function deletedCalendars(userId:string,workspaceId:string){await assertCanManageCalendarsInWorkspace(userId,workspaceId);return prisma.calendar.findMany({where:{workspaceId,deletedAt:{not:null}},orderBy:{deletedAt:"desc"}});}
+export async function restoreCalendar(userId:string,calendarId:string){const cal=await prisma.calendar.findUnique({where:{id:calendarId}});if(!cal)throw new Error("NOT_FOUND: calendar");await assertCanManageCalendarsInWorkspace(userId,cal.workspaceId);return prisma.calendar.update({where:{id:calendarId},data:{deletedAt:null,isArchived:false}});}

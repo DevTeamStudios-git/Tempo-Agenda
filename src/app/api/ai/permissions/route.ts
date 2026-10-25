@@ -1,0 +1,3 @@
+import {NextRequest,NextResponse} from 'next/server';import {requireUser,apiError} from '@/server/http/api';import {getAssistantPermissions,setAssistantPermissions} from '@/server/services/assistant-service';
+export async function GET(){try{const u=await requireUser();return NextResponse.json({permissions:await getAssistantPermissions(u.id)},{headers:{'Cache-Control':'no-store'}});}catch(e){return apiError(e);}}
+export async function PATCH(req:NextRequest){try{const u=await requireUser();return NextResponse.json({permissions:await setAssistantPermissions(u.id,await req.json())});}catch(e){return apiError(e);}}

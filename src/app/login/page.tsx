@@ -223,10 +223,6 @@ export default function LoginPage() {
             {mode === "signin" ? "Sign up" : "Sign in"}
           </button>
         </p>
-
-        <p style={{ margin: "18px 0 0", textAlign: "center", fontSize: 11, lineHeight: 1.4, color: "var(--muted)" }}>
-          Demo mode: set <code style={{ background: "var(--hover)", padding: "2px 6px", borderRadius: 6, color: "var(--ink)" }}>TEMPO_DEMO_MODE=true</code> to skip auth locally.
-        </p>
       </div>
 
       <p style={{ marginTop: 16, fontSize: 11, color: "var(--muted)", textAlign: "center" }}>

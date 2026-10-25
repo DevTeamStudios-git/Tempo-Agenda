@@ -58,7 +58,7 @@ export function AgendaView({
             </div>
             <div>
               {list.map((ev) => (
-                <button key={ev.id} className="arow" data-id={ev.id} style={{ ["--c" as string]: colorOf(ev.calendarId) } as any} onClick={() => onSelectEvent(ev.id)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onEventContextMenu?.(e, ev.id); }}>
+                <button key={ev.id} className="arow" data-id={ev.id} style={{ ["--c" as string]: (ev.color ?? colorOf(ev.calendarId)) } as any} onClick={() => onSelectEvent(ev.id)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onEventContextMenu?.(e, ev.id); }}>
                   <span className="sw" />
                   <span className="tm">{ev.allDay ? "All day" : formatRange(ev.startAt, ev.endAt, timeZone)}</span>
                   <span>

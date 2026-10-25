@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { addDays, addMonths, mondayOf, startOfWeek, titleForView, toInstant } from "@/lib/dates/date-utils";
 import { useCalendarEvents, useEventMutations } from "../hooks/useCalendarEvents";
 import { useCalendars } from "../hooks/useCalendars";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TimeGrid } from "./TimeGrid";
 import { MonthView } from "./MonthView";
 import { AgendaView } from "./AgendaView";
@@ -24,7 +24,13 @@ import { EventDialog } from "@/features/events/components/EventDialog";
 import { ChevronLeftIcon, ChevronRightIcon, DayViewIcon, WeekViewIcon, MonthViewIcon, AgendaViewIcon, PlusIcon, MenuIcon, SettingsIcon, PrintIcon, TrashIcon, BookIcon, YearViewIcon, CommandIcon, SearchIcon, HomeIcon, CalendarMarkIcon, EditIcon, DuplicateIcon, CopyIcon, CutIcon, PasteIcon, EyeIcon, SparklesIcon } from "@/lib/icons";
 import { NotificationCenter } from "@/features/notifications/components/NotificationCenter";
 import { SettingsDialog } from "@/features/settings/components/SettingsDialog";
+import { PlanningDialog } from "@/features/planning/components/PlanningDialog";
+import { TasksDialog } from "@/features/tasks/components/TasksDialog";
+import type { TaskRecord } from "@/server/services/task-service";
+import { DataDialog } from "@/features/data/components/DataDialog";
 import { PrintDialog } from "@/features/print/components/PrintDialog";
+import {useDialogFocus} from "@/lib/use-dialog-focus";
+import {CalendarManager} from "./CalendarManager";
 import { AiChat } from "@/features/ai/components/AiChat";
 import { ContextMenu } from "./ContextMenu";
 import { CommandPalette, type Command } from "./CommandPalette";
@@ -36,13 +42,6 @@ import type { CalendarSummary, CalendarView, EventDraft, EventRecord } from "../
 import { dayKey } from "@/lib/dates/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
 
-const FALLBACK_CALENDARS: CalendarSummary[] = [
-  { id: "work", name: "Work", color: "var(--work)", isDefault: true, isArchived: false },
-  { id: "personal", name: "Personal", color: "var(--personal)", isDefault: false, isArchived: false },
-  { id: "study", name: "Study", color: "var(--study)", isDefault: false, isArchived: false },
-  { id: "health", name: "Health", color: "var(--health)", isDefault: false, isArchived: false },
-];
-
 export function CalendarShell(props: { workspaceId: string; timeZone: string }) {
   return <CalendarShellInner {...props} />;
 }
@@ -53,13 +52,20 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
   const [miniAnchor, setMiniAnchor] = useState(new Date());
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
-  const [visibleCalendars, setVisibleCalendars] = useState<string[]>(FALLBACK_CALENDARS.map((c) => c.id));
+  const [visibleCalendars, setVisibleCalendars] = useState<string[]>([]);
   const [dialogDraft, setDialogDraft] = useState<EventDraft | null>(null);
   const [dialogIsNew, setDialogIsNew] = useState(false);
   const [dialogError, setDialogError] = useState("");
   const [toast, setToast] = useState<{ msg: string; undoId?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [planningOpen,setPlanningOpen]=useState(false);
+  const [tasksOpen,setTasksOpen]=useState(false);
+  const [showTasks,setShowTasks]=useState(true);
+  const [dataOpen,setDataOpen]=useState(false);
+  const [calendarsOpen,setCalendarsOpen]=useState(false);
+  const calendarsDialogRef=useRef<HTMLDivElement>(null);
+  useDialogFocus(calendarsOpen,calendarsDialogRef,()=>setCalendarsOpen(false));
   const [printOpen, setPrintOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [lastReset, setLastReset] = useState<{ ids: string[]; count: number } | null>(null);
@@ -78,25 +84,19 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
   }, [searchInput]);
 
   const { data: serverCalendars, isLoading: calLoading, isError: calError } = useCalendars(workspaceId);
-  const calendars: CalendarSummary[] = (() => {
-    if (calError) return FALLBACK_CALENDARS;
-    if (calLoading) return FALLBACK_CALENDARS;
-    if (serverCalendars && serverCalendars.length) return serverCalendars;
-    if (serverCalendars && serverCalendars.length === 0) return [];
-    return FALLBACK_CALENDARS;
-  })();
+  const calendars:CalendarSummary[]=serverCalendars?.filter(c=>!c.isArchived)??[];
+  const knownCalendarIds=useRef<string[]|null>(null);
+  useEffect(()=>{
+    if(!serverCalendars)return;
+    const active=serverCalendars.filter(c=>!c.isArchived).map(c=>c.id);
+    const previous=knownCalendarIds.current;
+    setVisibleCalendars(old=>previous===null?active:[...new Set([...old.filter(id=>active.includes(id)),...active.filter(id=>!previous.includes(id))])]);
+    knownCalendarIds.current=active;
+  },[serverCalendars]);
 
   useEffect(() => {
-    if (serverCalendars && serverCalendars.length && visibleCalendars.length === FALLBACK_CALENDARS.length) {
-      const fallbackSet = new Set(FALLBACK_CALENDARS.map((c) => c.id));
-      const isFallback = visibleCalendars.every((id) => fallbackSet.has(id));
-      if (isFallback) setVisibleCalendars(serverCalendars.map((c) => c.id));
-    }
-  }, [serverCalendars]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    setMiniAnchor(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
-  }, [anchor]);
+    setMiniAnchor(new Date(toInstant(formatInTimeZone(anchor,effectiveTimeZone,"yyyy-MM")+"-01",12,effectiveTimeZone)));
+  }, [anchor,effectiveTimeZone]);
 
   const days = useMemo(() => {
     if (view === "day") return [anchor];
@@ -117,7 +117,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
 
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (view === "month") {
-      const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+      const monthStart = new Date(toInstant(formatInTimeZone(anchor,effectiveTimeZone,"yyyy-MM")+"-01",0,effectiveTimeZone));
       const m = startOfWeek(monthStart, effectiveTimeZone, weekStart);
       return { rangeStart: m, rangeEnd: addDays(m, 42, effectiveTimeZone) };
     }
@@ -133,19 +133,24 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
       return { rangeStart: s, rangeEnd: addDays(s, 2, effectiveTimeZone) };
     }
     if (view === "year") {
-      const y = anchor.getFullYear();
-      const s = new Date(y, 0, 1);
-      const e = new Date(y + 1, 0, 1);
+      const y = Number(formatInTimeZone(anchor,effectiveTimeZone,"yyyy"));
+      const s = new Date(toInstant(`${y}-01-01`,0,effectiveTimeZone));
+      const e = new Date(toInstant(`${y+1}-01-01`,0,effectiveTimeZone));
       return { rangeStart: s, rangeEnd: e };
     }
     return { rangeStart: days[0]!, rangeEnd: addDays(days[days.length - 1]!, 1, effectiveTimeZone) };
   }, [view, days, anchor, effectiveTimeZone, weekStart]);
 
   const rangeArgs = { workspaceId, calendarIds: visibleCalendars, rangeStart, rangeEnd, q: debouncedQ || undefined };
-  const { data: events = [], isLoading, isError } = useCalendarEvents(rangeArgs);
+  const { data: calendarEvents = [], isLoading, isError } = useCalendarEvents(rangeArgs);
+  const {data:tasks=[]}=useQuery<TaskRecord[]>({queryKey:["tasks",workspaceId],queryFn:async()=>{const r=await fetch(`/api/tasks?workspaceId=${workspaceId}`);if(!r.ok)throw new Error("Could not load tasks");return (await r.json()).tasks;}});
+  const events:EventRecord[]=useMemo(()=>{
+    const scheduled:EventRecord[]=showTasks?tasks.filter(t=>!t.completedAt&&(t.startAt||t.dueAt)).map(t=>({id:"task:"+t.id,calendarId:"tasks",title:"☐ "+t.title,description:t.notes,location:"",startAt:t.startAt??t.dueAt!,endAt:t.endAt??t.dueAt!,timezone:effectiveTimeZone,allDay:!t.startAt,status:"confirmed",labels:[],color:"#137333",availability:"busy"})):[];
+    return [...calendarEvents,...scheduled].filter(e=>Date.parse(e.startAt)<+rangeEnd&&(Date.parse(e.endAt)>+rangeStart||(e.allDay&&Date.parse(e.endAt)>=+rangeStart))).filter(e=>(settings.showPastEvents||Date.parse(e.endAt)>=Date.now())&&(!debouncedQ||[e.title,e.description,e.location].join(" ").toLowerCase().includes(debouncedQ.toLowerCase())));
+  },[calendarEvents,tasks,showTasks,effectiveTimeZone,settings.showPastEvents,debouncedQ,rangeStart,rangeEnd]);
   const { create, update, moveOrResize, remove, restore } = useEventMutations(rangeArgs);
   const queryClient = useQueryClient();
-  const allDayCount = events.filter((e) => e.allDay).length;
+  const allDayCount = calendarEvents.filter((e) => e.allDay).length;
   const resetAllDay = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/events/reset-all-day", {
@@ -223,12 +228,13 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
     const targetCal = preferred ?? visibleCalendars[0] ?? calendars[0]?.id;
     if (!targetCal) return;
     const startAt = toInstant(dateKey, 0, effectiveTimeZone);
-    const endAt = toInstant(dateKey, 24 * 60, effectiveTimeZone);
+    const endAt = startAt;
     setDialogIsNew(true);
     setDialogDraft({ calendarId: targetCal, title: "", description: "", location: "", startAt, endAt, timezone: effectiveTimeZone, allDay: true });
   }
 
   function openExistingEvent(id: string) {
+    if(id.startsWith("task:")){setTasksOpen(true);return;}
     const event = events.find((e) => e.id === id);
     if (!event) return;
     setDialogIsNew(false);
@@ -237,7 +243,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
 
   function jumpToDay(dateKeyStr: string) {
     const [y, m, d] = dateKeyStr.split("-").map(Number);
-    setAnchor(new Date(y!, m! - 1, d!));
+    setAnchor(new Date(toInstant(`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`,12,effectiveTimeZone)));
     setView("day");
     setSidebarOpen(false);
   }
@@ -264,14 +270,14 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
     else if (draft.id) update.mutate({ ...draft, id: draft.id }, opts);
   }
 
-  function handleDelete() {
+  function handleDelete(scope: "this" | "following" | "series" = "this") {
     const id = dialogDraft?.id;
     if (!id) return;
     setDialogError("");
-    remove.mutate(id, {
+    remove.mutate(id + "?scope=" + scope, {
       onSuccess: () => {
         setDialogDraft(null);
-        setToast({ msg: "Event deleted.", undoId: id });
+        setToast({ msg: "Event deleted.", undoId: id.includes("~") ? undefined : id });
         setTimeout(() => setToast(null), 4000);
       },
       onError: (e: unknown) => setDialogError(e instanceof Error ? e.message : String(e)),
@@ -360,16 +366,19 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
     } catch {}
   }, [events, effectiveTimeZone, moveOrResize]);
 
+  const keyboardHandlers=useRef({handleNext,handlePrev,handleSave,openNewEventAt});
+  keyboardHandlers.current={handleNext,handlePrev,handleSave,openNewEventAt};
   // Keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if(e.defaultPrevented || (e.target as HTMLElement)?.closest?.('[role="dialog"]')) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setCommandOpen(o=>!o); return; }
       if ((e.target as HTMLElement)?.closest?.("input,textarea,select")) {
         if (e.key === "Escape" && dialogDraft) { setDialogDraft(null); setDialogError(""); }
         return;
       }
       if (e.metaKey || e.ctrlKey) {
-        if (e.key === "Enter" && dialogDraft) handleSave(dialogDraft);
+        if (e.key === "Enter" && dialogDraft) keyboardHandlers.current.handleSave(dialogDraft);
         // Ctrl/Cmd+C/V handled by menu, not intercept
         return;
       }
@@ -381,9 +390,9 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
       else if (k === "a") setView("agenda");
       else if (k === "b") setView("book");
       else if (k === "y") setView("year");
-      else if (k === "c" || k === "n") { e.preventDefault(); openNewEventAt(createDateKey, 9 * 60); }
-      else if (k === "j" || e.key === "ArrowRight") handleNext();
-      else if (k === "k" || e.key === "ArrowLeft") handlePrev();
+      else if (k === "c" || k === "n") { e.preventDefault(); keyboardHandlers.current.openNewEventAt(createDateKey, 9 * 60); }
+      else if (k === "j" || e.key === "ArrowRight") keyboardHandlers.current.handleNext();
+      else if (k === "k" || e.key === "ArrowLeft") keyboardHandlers.current.handlePrev();
       else if (e.key === "/") { e.preventDefault(); document.getElementById("global-search-input")?.focus(); }
       else if (e.key === "Escape" && sidebarOpen) setSidebarOpen(false);
       else if (e.key === "Escape" && commandOpen) setCommandOpen(false);
@@ -397,8 +406,8 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
   const eventsByDate = useMemo(() => {
     const s = new Set<string>();
     for (const e of events) {
-      const sk = dayKey(e.startAt, timeZone);
-      const ek = dayKey(e.endAt, timeZone);
+      const sk = dayKey(e.startAt, effectiveTimeZone);
+      const ek = dayKey(e.endAt, effectiveTimeZone);
       s.add(sk);
       if (sk !== ek) {
         let cur = sk;
@@ -413,7 +422,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
       }
     }
     return s;
-  }, [events, timeZone]);
+  }, [events, effectiveTimeZone]);
 
   const selectedRange: [string, string] = useMemo(() => {
     if (view === "week") {
@@ -434,7 +443,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
   // swipe for main (day/week quick page turn)
   const swipeRef = useRef<{ x: number } | null>(null);
   function onMainPointerDown(e: React.PointerEvent) {
-    if (view === "book" || view === "month" || view === "year") return;
+    if (e.pointerType === "mouse" || (e.target as HTMLElement).closest("button,input,textarea,.ev") || view === "book" || view === "month" || view === "year") return;
     swipeRef.current = { x: e.clientX };
   }
   function onMainPointerUp(e: React.PointerEvent) {
@@ -445,7 +454,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
     if (dx < 0) handleNext(); else handlePrev();
   }
 
-  const commands: Command[] = useMemo(() => [
+  const commands: Command[] = [
     { id: "create", label: "Create event", hint: "N", icon: <PlusIcon size={14} />, action: () => openNewEventAt(createDateKey, 9*60), keywords: ["new"] },
     { id: "today", label: "Go to today", hint: "T", icon: <HomeIcon size={14} />, action: () => setAnchor(new Date()) },
     { id: "jump", label: "Jump to date…", icon: <CalendarMarkIcon size={14} />, action: () => setShowDatePicker(true) },
@@ -458,10 +467,10 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
     { id: "year", label: "Switch to Year", hint: "Y", icon: <YearViewIcon size={14} />, action: () => setView("year") },
     { id: "print", label: "Print…", icon: <PrintIcon size={14} />, action: () => setPrintOpen(true) },
     { id: "settings", label: "Settings", icon: <SettingsIcon size={14} />, action: () => setSettingsOpen(true) },
-  ], [createDateKey]);
+  ];
 
   return (
-    <div className="app">
+    <div className="app" data-density={settings.density}>
       <header className="top">
         <button className="icon" id="menu" aria-label="Toggle sidebar" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((v) => !v)}><MenuIcon /></button>
         <div className="brand"><span className="mark" />Tempo</div>
@@ -479,7 +488,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
           workspaceId={workspaceId}
           calendarIds={visibleCalendars}
           calendars={calendars}
-          timeZone={timeZone}
+          timeZone={effectiveTimeZone}
           onJumpToDay={jumpToDay}
           onJumpToEvent={jumpToEvent}
         />
@@ -512,21 +521,18 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
             onSelect={(iso) => { const [y, m, d] = iso.split("-").map(Number); setAnchor(new Date(y!, m! - 1, d!)); setSidebarOpen(false); }}
             onPrev={() => setMiniAnchor((d) => addMonths(d, -1, effectiveTimeZone))}
             onNext={() => setMiniAnchor((d) => addMonths(d, 1, effectiveTimeZone))}
+            selectedDateKey={dayKey(anchor.toISOString(),effectiveTimeZone)}
             selectedRange={selectedRange}
           />
           <UpNext events={events} calendars={calendars} timeZone={effectiveTimeZone} />
           <PomodoroTimer />
+          <button className="calrow" onClick={()=>{setPlanningOpen(true);setSidebarOpen(false);}}>Find a time & insights</button>
+          <button className="calrow" onClick={()=>{setTasksOpen(true);setSidebarOpen(false);}}>Tasks</button>
+          <label className="calrow"><input type="checkbox" checked={showTasks} onChange={e=>setShowTasks(e.target.checked)}/>Show tasks on calendar</label>
+          <button className="calrow" onClick={()=>{setDataOpen(true);setSidebarOpen(false);}}>Import / export & trash</button>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <h2 style={{ margin: 0 }}>My calendars</h2>
-            <button
-              className="btn ghost"
-              onClick={() => setResetConfirmOpen(true)}
-              disabled={!allDayCount || resetAllDay.isPending}
-              title={allDayCount ? `Reset ${allDayCount} all-day event(s)` : "No all-day events"}
-              style={{ height: 28, padding: "0 8px", fontSize: 11, opacity: !allDayCount ? 0.5 : 1, gap: 4 }}
-            >
-              <TrashIcon size={12} /> Reset all-day
-            </button>
+            <button className="btn ghost" aria-label="Manage calendars" onClick={()=>setCalendarsOpen(true)}><PlusIcon size={16}/> Manage</button>
           </div>
           {calError && <p style={{ fontSize: 12, color: "var(--now)" }}>Calendars failed to load.</p>}
           {calLoading && <p style={{ fontSize: 12, color: "var(--muted)" }}>Loading calendars…</p>}
@@ -565,9 +571,9 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
           {isLoading ? (
             <p style={{ padding: 16, color: "var(--muted)" }}>Loading…</p>
           ) : view === "month" ? (
-            <MonthView anchor={anchor} events={events} calendars={calendars} timeZone={effectiveTimeZone} weekStart={weekStart} onSelectEvent={openExistingEvent} onCreateAt={openNewEventAt} onEventContextMenu={(e,id)=>setCtx({x:e.clientX,y:e.clientY,kind:"event",eventId:id})} onEmptyContextMenu={(e,k,mins)=>setCtx({x:e.clientX,y:e.clientY,kind:"empty",dateKey:k,minutes:mins})} />
+            <MonthView anchor={anchor} events={events} calendars={calendars} timeZone={effectiveTimeZone} weekStart={weekStart} onSelectEvent={openExistingEvent} onCreateAt={openNewEventAt} onEventContextMenu={(e,id)=>{if(id.startsWith("task:"))setTasksOpen(true);else setCtx({x:e.clientX,y:e.clientY,kind:"event",eventId:id});}} onEmptyContextMenu={(e,k,mins)=>setCtx({x:e.clientX,y:e.clientY,kind:"empty",dateKey:k,minutes:mins})} />
           ) : view === "agenda" ? (
-            <AgendaView events={events} calendars={calendars} timeZone={effectiveTimeZone} onSelectEvent={openExistingEvent} anchor={anchor} onEventContextMenu={(e,id)=>setCtx({x:e.clientX,y:e.clientY,kind:"event",eventId:id})} onEmptyContextMenu={(e,k,mins)=>setCtx({x:e.clientX,y:e.clientY,kind:"empty",dateKey:k,minutes:mins})} />
+            <AgendaView events={events} calendars={calendars} timeZone={effectiveTimeZone} onSelectEvent={openExistingEvent} anchor={anchor} onEventContextMenu={(e,id)=>{if(id.startsWith("task:"))setTasksOpen(true);else setCtx({x:e.clientX,y:e.clientY,kind:"event",eventId:id});}} onEmptyContextMenu={(e,k,mins)=>setCtx({x:e.clientX,y:e.clientY,kind:"empty",dateKey:k,minutes:mins})} />
           ) : view === "book" ? (
             <BookView anchor={anchor} events={events} calendars={calendars} timeZone={effectiveTimeZone} onSelectEvent={openExistingEvent} onCreateAt={openNewEventAt} onPrev={handlePrev} onNext={handleNext} onGoToday={()=>setAnchor(new Date())} onJumpToDate={(iso)=>jumpToDay(iso)} />
           ) : view === "year" ? (
@@ -583,9 +589,9 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
               timeZone={effectiveTimeZone}
               onSelectEvent={openExistingEvent}
               onCreateAt={openNewEventAt}
-              onMoveOrResize={(id, startAt, endAt) => moveOrResize.mutate({ id, startAt, endAt })}
+              onMoveOrResize={(id,startAt,endAt)=>{if(id.startsWith("task:")){fetch("/api/tasks/"+id.slice(5),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({startAt,endAt})}).then(async r=>{if(!r.ok)throw new Error("Could not reschedule task");await queryClient.invalidateQueries({queryKey:["tasks"]});}).catch(e=>setToast({msg:e.message}));}else moveOrResize.mutate({id,startAt,endAt},{onError:e=>setToast({msg:e.message})});}}
               onSelectDay={(iso) => { const [y, m, d] = iso.split("-").map(Number); setAnchor(new Date(y!, m! - 1, d!)); setView("day"); }}
-              onEventContextMenu={(e,id)=>setCtx({x:e.clientX,y:e.clientY,kind:"event",eventId:id})}
+              onEventContextMenu={(e,id)=>{if(id.startsWith("task:"))setTasksOpen(true);else setCtx({x:e.clientX,y:e.clientY,kind:"event",eventId:id});}}
               onEmptyContextMenu={(e,k,mins)=>setCtx({x:e.clientX,y:e.clientY,kind:"empty",dateKey:k,minutes:mins})}
             />
           )}
@@ -616,6 +622,9 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
         externalError={dialogError}
       />
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} calendars={calendars} />
+      <PlanningDialog open={planningOpen} onClose={()=>setPlanningOpen(false)} workspaceId={workspaceId} calendars={calendars} timeZone={effectiveTimeZone} onCreate={(startAt,endAt)=>{setDialogIsNew(true);setDialogDraft({calendarId:visibleCalendars[0]??calendars[0]?.id??"",title:"",description:"",location:"",startAt,endAt,timezone:effectiveTimeZone,allDay:false});}}/>
+      <TasksDialog open={tasksOpen} onClose={()=>setTasksOpen(false)} workspaceId={workspaceId} timeZone={effectiveTimeZone}/>
+      <DataDialog onSelectEvent={jumpToEvent} open={dataOpen} onClose={()=>setDataOpen(false)} workspaceId={workspaceId} calendars={calendars} timeZone={effectiveTimeZone} />
       <PrintDialog
         open={printOpen}
         onClose={() => setPrintOpen(false)}
@@ -625,7 +634,8 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
         timeZone={timeZone}
         anchor={anchor}
       />
-      <AiChat open={aiChatOpen} onClose={() => setAiChatOpen(false)} />
+      {calendarsOpen&&<div className="ov" onMouseDown={e=>{if(e.target===e.currentTarget)setCalendarsOpen(false);}}><div ref={calendarsDialogRef} className="dlg" role="dialog" aria-modal="true" aria-label="Manage calendars"><button className="btn" onClick={()=>setCalendarsOpen(false)}>Close</button><CalendarManager workspaceId={workspaceId}/></div></div>}
+      <AiChat workspaceId={workspaceId} timeZone={effectiveTimeZone} open={aiChatOpen} onClose={() => setAiChatOpen(false)} />
 
       {showDatePicker && (
         <div className="ov" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowDatePicker(false); }}>

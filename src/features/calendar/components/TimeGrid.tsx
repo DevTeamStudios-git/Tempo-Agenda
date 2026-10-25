@@ -4,7 +4,7 @@
  * placement comes from layoutDay(); drag/resize lives in useEventDrag().
  * Notebook v3 §3.5: Event → EventSegment → layoutSegments → render
  */
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { segmentEventsForDays, layoutSegments } from "../lib/event-segmentation";
 import { dayKey, formatClock, minutesOfDay } from "@/lib/dates/date-utils";
 import type { CalendarSummary, EventRecord } from "../types";
@@ -63,8 +63,10 @@ export function TimeGrid({
   const { onPointerDown } = useEventDrag({ timeZone, hourHeight: HOUR, days, onMoveOrResize, gridRef: gridRef as any });
   const { settings } = useSettings();
 
-  const today = dayKey(new Date().toISOString(), timeZone);
-  const nowMinutes = minutesOfDay(new Date().toISOString(), timeZone);
+  const [clock,setClock]=useState(()=>new Date());
+  useEffect(()=>{const timer=setInterval(()=>setClock(new Date()),30_000);return()=>clearInterval(timer);},[]);
+  const today = dayKey(clock.toISOString(), timeZone);
+  const nowMinutes = minutesOfDay(clock.toISOString(), timeZone);
 
   return (
     <div className="tg-wrap" id="scroll">
@@ -89,7 +91,7 @@ export function TimeGrid({
             return (
               <div key={key} className="ac">
                 {list.map((ev) => (
-                  <button key={ev.id} className="chip" data-id={ev.id} style={{ ["--c" as string]: colorOf(ev.calendarId) } as any} onClick={() => onSelectEvent(ev.id)}>
+                  <button key={ev.id} className="chip" data-id={ev.id} style={{ ["--c" as string]: (ev.color ?? colorOf(ev.calendarId)) } as any} onClick={() => onSelectEvent(ev.id)}>
                     {ev.title}
                   </button>
                 ))}
@@ -150,7 +152,7 @@ export function TimeGrid({
                         height: h,
                         left: `calc(${(column / columnCount) * 100}% + 2px)`,
                         width: `calc(${100 / columnCount}% - 4px)`,
-                        ["--c" as string]: colorOf(orig.calendarId),
+                        ["--c" as string]: (orig.color ?? colorOf(orig.calendarId)),
                         opacity: seg.continuesBefore || seg.continuesAfter ? 0.92 : 1,
                       }}
                       onPointerDown={(e) => onPointerDown(e, orig, "move")}

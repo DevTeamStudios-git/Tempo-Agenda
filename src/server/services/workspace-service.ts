@@ -44,20 +44,21 @@ export async function assertCanWriteWorkspace(userId: string, workspaceId: strin
 
 export async function assertCalendarAccess(userId: string, calendarId: string) {
   const calendar = await prisma.calendar.findUnique({ where: { id: calendarId } });
-  if (!calendar) throw new Error("NOT_FOUND: calendar");
+  if (!calendar || calendar.deletedAt) throw new Error("NOT_FOUND: calendar");
   await assertWorkspaceMember(userId, calendar.workspaceId);
   return calendar;
 }
 
 export async function assertCanCreateEvent(userId: string, calendarId: string) {
   const cal = await assertCalendarAccess(userId, calendarId);
+  if(cal.isArchived)throw new Error("CONFLICT: calendar is archived");
   await assertCanWriteWorkspace(userId, cal.workspaceId);
   return cal;
 }
 
 export async function assertCanEditEvent(userId: string, eventId: string) {
   const event = await prisma.event.findUnique({ where: { id: eventId }, include: { calendar: true } });
-  if (!event) throw new Error("NOT_FOUND: event");
+  if (!event || event.calendar.deletedAt) throw new Error("NOT_FOUND: event");
   if (event.deletedAt) throw new Error("CONFLICT: event is deleted");
   await assertCanWriteWorkspace(userId, event.calendar.workspaceId);
   return event;
@@ -159,12 +160,7 @@ export async function ensureDefaultWorkspaceForUser(
       data: { workspaceId: workspace.id, userId, role: "owner" },
     });
 
-    const defaults: { name: string; color: string; isDefault: boolean }[] = [
-      { name: "Work", color: "work", isDefault: true },
-      { name: "Personal", color: "personal", isDefault: false },
-      { name: "Study", color: "study", isDefault: false },
-      { name: "Health", color: "health", isDefault: false },
-    ];
+    const defaults = [{name:"My calendar",color:"#0b57d0",isDefault:true}];
     for (const cal of defaults) {
       await tx.calendar.create({
         data: { workspaceId: workspace.id, name: cal.name, color: cal.color, isDefault: cal.isDefault },

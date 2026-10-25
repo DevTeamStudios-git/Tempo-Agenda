@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 export type WeekStart = "monday" | "sunday";
 export type TimeFormat = "12h" | "24h";
 
-export type AiProvider = "groq" | "openrouter" | "custom";
+export type AiProvider = "groq" | "openrouter" | "together";
+
 export interface AiPermissions {
   canRead: boolean;
   canCreateEvents: boolean;
@@ -14,6 +15,9 @@ export interface AiPermissions {
 }
 
 export interface UserSettings {
+  workingStart:number;
+  workingEnd:number;
+  secondaryTimezone:string;
   timezone: string;
   weekStart: WeekStart;
   timeFormat: TimeFormat;
@@ -28,17 +32,20 @@ export interface UserSettings {
   aiEnabled: boolean;
   aiProvider: AiProvider;
   aiModel: string;
+  aiProviderKeys?:Partial<Record<AiProvider,string>>;
   aiApiKey: string; // stored locally, full key without prefix
   aiKeyPrefix: string; // shown before input, from env or user
   aiPermissions: AiPermissions;
   aiVisionEnabled: boolean; // allow image attachments
 }
 
+export { AI_MODELS, AI_DEFAULT_MODEL, AI_KEY_PREFIXES } from "./ai/catalog";
+import { AI_MODELS, AI_DEFAULT_MODEL, AI_KEY_PREFIXES } from "./ai/catalog";
+
 const KEY = "tempo-settings";
 
-const ENV_PREFIX = typeof process !== "undefined" ? (process.env.NEXT_PUBLIC_GROQ_KEY_PREFIX || process.env.NEXT_PUBLIC_AI_KEY_PREFIX || "gsk_") : "gsk_";
-
 const DEFAULTS: UserSettings = {
+  workingStart:540, workingEnd:1020, secondaryTimezone:"UTC",
   timezone: "America/Toronto",
   weekStart: "monday",
   timeFormat: "12h",
@@ -51,9 +58,9 @@ const DEFAULTS: UserSettings = {
   density: "comfortable",
   aiEnabled: false,
   aiProvider: "groq",
-  aiModel: "llama-3.1-8b-instant",
+  aiModel: AI_DEFAULT_MODEL.groq,
   aiApiKey: "",
-  aiKeyPrefix: ENV_PREFIX,
+  aiKeyPrefix: AI_KEY_PREFIXES.groq,
   aiPermissions: {
     canRead: true,
     canCreateEvents: true,
@@ -65,13 +72,27 @@ const DEFAULTS: UserSettings = {
   aiVisionEnabled: true,
 };
 
+const DEPRECATED_MODELS=new Set(["gemma2-9b-it","llama-3.1-8b-instant","llama-3.3-70b-versatile","llama-3.1-70b-versatile","qwen-2.5-32b-instruct","mixtral-8x7b-32768","llama-3.2-11b-vision-preview","llama-3.2-90b-vision-preview"]);
+
 export function getSettings(): UserSettings {
   if (typeof window === "undefined") return DEFAULTS;
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
-    const parsed = JSON.parse(raw);
-    return { ...DEFAULTS, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<UserSettings> & { aiProvider?: string };
+    // migrate old provider "custom" -> "groq"
+    let prov = (parsed.aiProvider as AiProvider) || DEFAULTS.aiProvider;
+    if ((prov as string) === "custom") prov = "groq";
+    if (!AI_MODELS[prov]) prov = "groq";
+    // Preserve dynamically discovered model IDs; migrate known retired choices.
+    const mdl = !parsed.aiModel || DEPRECATED_MODELS.has(parsed.aiModel) ? AI_DEFAULT_MODEL[prov] : parsed.aiModel;
+    const merged: UserSettings = { ...DEFAULTS, ...parsed, aiProvider: prov, aiModel: mdl, aiPermissions: { ...DEFAULTS.aiPermissions, ...parsed.aiPermissions } };
+    // also fix prefix if it doesn't match provider
+    if (merged.aiKeyPrefix === "gsk_" && prov !== "groq") merged.aiKeyPrefix = AI_KEY_PREFIXES[prov];
+    if (merged.aiKeyPrefix !== AI_KEY_PREFIXES[prov] && parsed.aiProvider !== prov) {
+      merged.aiKeyPrefix = AI_KEY_PREFIXES[prov];
+    }
+    return merged;
   } catch {
     return DEFAULTS;
   }
@@ -79,7 +100,7 @@ export function getSettings(): UserSettings {
 
 export function saveSettings(patch: Partial<UserSettings>) {
   const next = { ...getSettings(), ...patch };
-  localStorage.setItem(KEY, JSON.stringify(next));
+  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* Keep preferences in memory if browser storage is unavailable. */ }
   // Dispatch event so other hooks update
   window.dispatchEvent(new CustomEvent("tempo-settings-changed", { detail: next }));
   return next;

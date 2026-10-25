@@ -39,6 +39,8 @@ model UserProfile {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  assistantPolicy AssistantPolicy?
+  assistantPlans AssistantPlan[]
   ownedWorkspaces Workspace[]  @relation("WorkspaceOwner")
   memberships     Membership[]
   createdEvents   Event[]      @relation("EventCreator")
@@ -59,6 +61,8 @@ model Workspace {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  assistantPlans AssistantPlan[]
+  tasks       Task[]
   memberships Membership[]
   calendars   Calendar[]
   auditLogs   AuditLog[]
@@ -84,6 +88,7 @@ model Membership {
 }
 
 model Calendar {
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
   id          String   @id @default(cuid())
   workspaceId String   @map("workspace_id")
   name        String
@@ -111,6 +116,11 @@ model Event {
   endAt            DateTime    @map("end_at") @db.Timestamptz(3)
   timezone         String      // IANA zone the event was authored in, e.g. "America/Toronto"
   allDay           Boolean     @default(false) @map("all_day")
+  color            String?
+  visibility       String @default("default")
+  availability     String @default("busy")
+  eventType        String @default("event") @map("event_type")
+  conferenceUrl    String? @map("conference_url")
   status           EventStatus @default(confirmed)
   createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -150,6 +160,8 @@ model RecurrenceRule {
 }
 
 model Attendee {
+  inviteTokenHash String? @unique @map("invite_token_hash")
+  inviteExpiresAt DateTime? @map("invite_expires_at") @db.Timestamptz(3)
   id             String   @id @default(cuid())
   eventId        String   @map("event_id")
   userId         String?  @map("user_id") // null for external, email-only invitees
@@ -221,4 +233,62 @@ model Notification {
   @@index([workspaceId])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model Task {
+  id String @id @default(cuid())
+  workspaceId String @map("workspace_id")
+  userId String @map("user_id")
+  title String
+  notes String @default("")
+  listName String @default("My tasks") @map("list_name")
+  startAt DateTime? @map("start_at") @db.Timestamptz(3)
+  endAt DateTime? @map("end_at") @db.Timestamptz(3)
+  dueAt DateTime? @map("due_at") @db.Timestamptz(3)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  @@index([workspaceId,userId])
+  @@map("tasks")
+}
+
+model DeliveryJob {
+  id String @id @default(cuid())
+  dedupeKey String @unique @map("dedupe_key")
+  payload Json?
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  lockedAt DateTime? @map("locked_at") @db.Timestamptz(3)
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(3)
+  lastError String? @map("last_error")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([deliveredAt,nextAttemptAt])
+  @@map("delivery_jobs")
+}
+
+model AssistantPolicy {
+ userId String @id @map("user_id")
+ canRead Boolean @default(false) @map("can_read")
+ canCreateEvents Boolean @default(false) @map("can_create_events")
+ canEditEvents Boolean @default(false) @map("can_edit_events")
+ canDeleteEvents Boolean @default(false) @map("can_delete_events")
+ canCreateCalendars Boolean @default(false) @map("can_create_calendars")
+ canManageCalendars Boolean @default(false) @map("can_manage_calendars")
+ updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+ user UserProfile @relation(fields:[userId],references:[id],onDelete:Cascade)
+ @@map("assistant_policies")
+}
+model AssistantPlan {
+ id String @id @default(cuid())
+ userId String @map("user_id")
+ workspaceId String @map("workspace_id")
+ actions Json
+ results Json?
+ state String @default("pending")
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ user UserProfile @relation(fields:[userId],references:[id],onDelete:Cascade)
+ workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+ @@index([userId,createdAt])
+ @@map("assistant_plans")
 }

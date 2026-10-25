@@ -8,58 +8,28 @@
 import { addDays as fnsAddDays, addMonths as fnsAddMonths, startOfDay, startOfMonth } from "date-fns";
 import { formatInTimeZone, toZonedTime, fromZonedTime } from "date-fns-tz";
 
-export function mondayOf(date: Date, timeZone: string): Date {
-  // Notebook v3 §4.2: keep civil date explicit — avoid mixing zoned Date with runtime local startOfDay.
-  // Determine weekday in target tz, then reconstruct that Monday's civil midnight via fromZonedTime.
-  const zoned = toZonedTime(date, timeZone);
-  const day = (zoned.getDay() + 6) % 7; // Mon=0..Sun=6
-  const mondayZoned = fnsAddDays(zoned, -day);
-  const mk = formatInTimeZone(mondayZoned, timeZone, "yyyy-MM-dd");
-  const [my, mm, md] = mk.split("-").map(Number);
-  const mondayLocal = new Date((my ?? 1970), (mm ?? 1) - 1, md ?? 1, 0, 0, 0);
-  return fromZonedTime(mondayLocal, timeZone);
+// Civil arithmetic is performed in UTC as a neutral calendar, then interpreted once.
+function civilParts(date: Date, zone: string) {
+  return formatInTimeZone(date, zone, "yyyy-MM-dd").split("-").map(Number) as [number, number, number];
 }
-
+function midnight(year: number, month: number, day: number, zone: string): Date {
+  const key = new Date(Date.UTC(year, month - 1, day)).toISOString().slice(0, 10);
+  return fromZonedTime(key + "T00:00:00", zone);
+}
+export function mondayOf(date: Date, timeZone: string): Date { return startOfWeek(date, timeZone, "monday"); }
 export function startOfWeek(date: Date, timeZone: string, weekStart: "monday" | "sunday" = "monday"): Date {
-  if (weekStart === "sunday") {
-    const zoned = toZonedTime(date, timeZone);
-    const dow = zoned.getDay(); // 0 Sun
-    const sundayZoned = fnsAddDays(zoned, -dow);
-    const mk = formatInTimeZone(sundayZoned, timeZone, "yyyy-MM-dd");
-    const [my, mm, md] = mk.split("-").map(Number);
-    const local = new Date((my ?? 1970), (mm ?? 1) - 1, md ?? 1, 0, 0, 0);
-    return fromZonedTime(local, timeZone);
-  }
-  return mondayOf(date, timeZone);
+  const [y,m,d] = civilParts(date, timeZone);
+  const dow = new Date(Date.UTC(y,m-1,d)).getUTCDay();
+  return midnight(y,m,d - (weekStart === "monday" ? (dow+6)%7 : dow),timeZone);
 }
-
 export function addDays(date: Date, amount: number, timeZone?: string): Date {
-  // Notebook v3 §4.1: calendar day should be civil, not 24h instant, when timezone given
-  if (timeZone) {
-    const civil = formatInTimeZone(date, timeZone, "yyyy-MM-dd");
-    const [y, m, d] = civil.split("-").map(Number);
-    // Shift by `amount` civil days, then reconstruct that civil date's midnight
-    // in `timeZone` (going through noon first avoids DST-midnight ambiguity).
-    const local = new Date((y ?? 1970), (m ?? 1) - 1, (d ?? 1) + amount, 12, 0, 0);
-    const iso = formatInTimeZone(local, timeZone, "yyyy-MM-dd");
-    const [ny, nm, nd] = iso.split("-").map(Number);
-    const midnightLocal = new Date((ny ?? 1970), (nm ?? 1) - 1, nd ?? 1, 0, 0, 0);
-    return fromZonedTime(midnightLocal, timeZone);
-  }
-  return fnsAddDays(date, amount);
+  if (!timeZone) return fnsAddDays(date,amount);
+  const [y,m,d] = civilParts(date,timeZone);
+  return midnight(y,m,d+amount,timeZone);
 }
-
 export function addMonths(date: Date, amount: number, timeZone: string): Date {
-  // Calendar-month navigation: interpret anchor in its timezone, shift month, reconvert.
-  const civil = formatInTimeZone(date, timeZone, "yyyy-MM-dd");
-  const [y, m] = civil.split("-").map(Number);
-  // Move to first of month at noon to avoid DST, then shift months civilly
-  const local = new Date((y ?? 1970), (m ?? 1) - 1, 1, 12, 0, 0);
-  const shifted = fnsAddMonths(local, amount);
-  const iso = formatInTimeZone(shifted, timeZone, "yyyy-MM");
-  const [ny, nm] = iso.split("-").map(Number);
-  const targetLocal = new Date((ny ?? 1970), (nm ?? 1) - 1, 1, 0, 0, 0);
-  return fromZonedTime(targetLocal, timeZone);
+  const [y,m] = civilParts(date,timeZone);
+  return midnight(y,m+amount,1,timeZone);
 }
 
 export function startOfMonthInZone(date: Date, timeZone: string): Date {

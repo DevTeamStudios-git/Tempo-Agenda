@@ -1,0 +1,32 @@
+buildscript {
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35
+        targetSdkVersion = 34
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.25"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    }
+}
+
+// Keep generated C++ paths below Windows' native toolchain path limit.
+subprojects { subproject ->
+    subproject.plugins.withId("com.android.library") {
+        if (subproject.name == "react-native-reanimated") {
+            subproject.android.externalNativeBuild.cmake.buildStagingDirectory = file("${rootDir}/.cxx/r")
+            subproject.android.defaultConfig.externalNativeBuild.cmake.arguments "-DCMAKE_OBJECT_PATH_MAX=240"
+        }
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
+

@@ -18,11 +18,8 @@ const nextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
-      // Cache static assets aggressively, but never cache HTML
-      {
-        source: "/_next/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
-      },
+      // Next.js sets immutable caching only for versioned production assets.
+      // Overriding it for dev chunks serves stale JavaScript across restarts.
     ];
   },
   // Redirect www → apex if siteUrl is set (optional, not enforced without env)

@@ -10,7 +10,7 @@ export function createSupabaseBrowserClient() {
     // Return mock that surfaces config error on use, but doesn't crash prerender
     return {
       auth: {
-        signInWithPassword: async () => ({ data: null, error: { message: "Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and keys or use TEMPO_DEMO_MODE=true." } }),
+        signInWithPassword: async () => ({ data: null, error: { message: "Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and the public Supabase key." } }),
         signUp: async () => ({ data: null, error: { message: "Supabase not configured." } }),
         signInWithOAuth: async () => ({ data: null, error: { message: "Supabase not configured." } }),
         getUser: async () => ({ data: { user: null }, error: null }),

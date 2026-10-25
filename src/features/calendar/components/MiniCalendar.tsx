@@ -1,6 +1,6 @@
 "use client";
 import { useMemo } from "react";
-import { dayKey } from "@/lib/dates/date-utils";
+import { dayKey, startOfWeek, addDays, toInstant } from "@/lib/dates/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
 
 export function MiniCalendar({
@@ -11,6 +11,7 @@ export function MiniCalendar({
   onPrev,
   onNext,
   selectedRange,
+  selectedDateKey,
   weekStart = "monday",
 }: {
   anchor: Date;
@@ -20,29 +21,22 @@ export function MiniCalendar({
   onPrev: () => void;
   onNext: () => void;
   selectedRange: [string, string];
+  selectedDateKey?:string;
   weekStart?: "monday" | "sunday";
 }) {
   const weekdays = weekStart === "sunday" ? ["S", "M", "T", "W", "T", "F", "S"] : ["M", "T", "W", "T", "F", "S", "S"];
   const { monthLabel, cells, todayKey } = useMemo(() => {
     const label = formatInTimeZone(anchor, timeZone, "MMMM yyyy");
-    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const start = new Date(first);
-    const dow = weekStart === "sunday" ? first.getDay() : (first.getDay() + 6) % 7;
-    start.setDate(1 - dow);
-    const today = formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd");
-    const arr: { date: Date; iso: string; isOut: boolean }[] = [];
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const iso = formatInTimeZone(d, timeZone, "yyyy-MM-dd");
-      const isOut = formatInTimeZone(d, timeZone, "MM") !== formatInTimeZone(anchor, timeZone, "MM");
-      arr.push({ date: d, iso, isOut });
-    }
+    const monthKey=formatInTimeZone(anchor,timeZone,"yyyy-MM");
+    const first=new Date(toInstant(monthKey+"-01",0,timeZone));
+    const start=startOfWeek(first,timeZone,weekStart);
+    const today=formatInTimeZone(new Date(),timeZone,"yyyy-MM-dd");
+    const arr=Array.from({length:42},(_,i)=>{const date=addDays(start,i,timeZone);const iso=dayKey(date.toISOString(),timeZone);return {date,iso,isOut:iso.slice(0,7)!==monthKey};});
     return { monthLabel: label, cells: arr, todayKey: today };
   }, [anchor, timeZone, weekStart]);
 
   const [rs, re] = selectedRange;
-  const selectedKey = formatInTimeZone(anchor, timeZone, "yyyy-MM-dd");
+  const selectedKey = selectedDateKey ?? formatInTimeZone(anchor, timeZone, "yyyy-MM-dd");
 
   return (
     <div className="mini">

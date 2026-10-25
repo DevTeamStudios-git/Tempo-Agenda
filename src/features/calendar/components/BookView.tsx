@@ -131,7 +131,7 @@ export function BookView({
             const top = (sMin * 48) / 60;
             const h = Math.max(22, ((eMin - sMin) * 48) / 60 - 2);
             return (
-              <button key={ev.id} className="book-ev" style={{ top, height: h, ["--c" as string]: colorOf(ev.calendarId) } as any} onClick={(e) => { e.stopPropagation(); onSelectEvent(ev.id); }}>
+              <button key={ev.id} className="book-ev" style={{ top, height: h, ["--c" as string]: (ev.color ?? colorOf(ev.calendarId)) } as any} onClick={(e) => { e.stopPropagation(); onSelectEvent(ev.id); }}>
                 <span className="book-ev-time">{formatClockWithFormat(ev.startAt, timeZone, settings.timeFormat)} – {formatClockWithFormat(ev.endAt, timeZone, settings.timeFormat)}</span>
                 <span className="book-ev-title">{ev.title}</span>
                 {ev.location && h > 44 && <span className="book-ev-loc">{ev.location}</span>}
@@ -141,7 +141,7 @@ export function BookView({
           {list.filter(e => e.allDay).length > 0 && (
             <div className="book-allday">
               {list.filter(e => e.allDay).map(ev => (
-                <button key={ev.id} className="chip" style={{ ["--c" as string]: colorOf(ev.calendarId) } as any} onClick={(e) => { e.stopPropagation(); onSelectEvent(ev.id); }}>{ev.title}</button>
+                <button key={ev.id} className="chip" style={{ ["--c" as string]: (ev.color ?? colorOf(ev.calendarId)) } as any} onClick={(e) => { e.stopPropagation(); onSelectEvent(ev.id); }}>{ev.title}</button>
               ))}
             </div>
           )}

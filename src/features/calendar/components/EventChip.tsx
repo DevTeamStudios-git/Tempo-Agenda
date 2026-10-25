@@ -48,7 +48,7 @@ export function EventChip({
   return (
     <button
       className="chip"
-      style={{ ["--c" as string]: colorVar }}
+      style={{ ["--c" as string]: event.color ?? colorVar }}
       onClick={() => onSelect(event.id)}
     >
       {!event.allDay && <b>{formatClock(event.startAt, timeZone)} </b>}

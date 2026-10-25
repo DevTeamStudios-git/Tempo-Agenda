@@ -1,6 +1,6 @@
 "use client";
 import { useMemo } from "react";
-import { addDays, dayKey, formatClock } from "@/lib/dates/date-utils";
+import { addDays, dayKey, formatClock, startOfWeek, toInstant } from "@/lib/dates/date-utils";
 import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import type { CalendarSummary, EventRecord } from "../types";
 
@@ -29,19 +29,12 @@ export function MonthView({
 
   const weekdays = weekStart === "sunday" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const { grid, daysInMonth } = useMemo(() => {
-    const zoned = toZonedTime(anchor, timeZone);
-    const monthStart = new Date(zoned.getFullYear(), zoned.getMonth(), 1);
-    const startDow = weekStart === "sunday" ? monthStart.getDay() : (monthStart.getDay() + 6) % 7;
-    const cells: Date[] = [];
-    const start = new Date(monthStart);
-    start.setDate(1 - startDow);
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      cells.push(d);
-    }
-    const daysInMonthVal = new Date(zoned.getFullYear(), zoned.getMonth() + 1, 0).getDate();
-    return { grid: cells, daysInMonth: daysInMonthVal };
+    const monthKey=formatInTimeZone(anchor,timeZone,"yyyy-MM");
+    const first=new Date(toInstant(monthKey+"-01",0,timeZone));
+    const start=startOfWeek(first,timeZone,weekStart);
+    const cells=Array.from({length:42},(_,i)=>addDays(start,i,timeZone));
+    const [y,m]=monthKey.split("-").map(Number);
+    return {grid:cells,daysInMonth:new Date(Date.UTC(y!,m!,0)).getUTCDate()};
   }, [anchor, timeZone, weekStart]);
 
   // Notebook v3 §3.2: month must show each touched day, not just start
@@ -96,7 +89,7 @@ export function MonthView({
                     onClick={(e) => { e.stopPropagation(); onSelectEvent(ev.id); }}
                     onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onEventContextMenu?.(e, ev.id); }}
                     className="chip"
-                    style={{ ["--c" as string]: colorOf(ev.calendarId) } as any}
+                    style={{ ["--c" as string]: (ev.color ?? colorOf(ev.calendarId)) } as any}
                   >
                     {!ev.allDay && <b>{formatClock(ev.startAt, timeZone)} </b>}
                     {ev.title}
@@ -109,7 +102,7 @@ export function MonthView({
                 )}
                 <div className="dots">
                   {list.slice(0, 5).map((ev) => (
-                    <i key={ev.id} style={{ ["--c" as string]: colorOf(ev.calendarId) } as any} />
+                    <i key={ev.id} style={{ ["--c" as string]: (ev.color ?? colorOf(ev.calendarId)) } as any} />
                   ))}
                 </div>
               </div>

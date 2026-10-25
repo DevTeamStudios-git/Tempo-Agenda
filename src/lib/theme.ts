@@ -4,7 +4,8 @@ const KEY = "tempo-theme";
 
 export function getStoredTheme(): Theme {
   if (typeof window === "undefined") return "system";
-  const v = localStorage.getItem(KEY) as Theme | null;
+  let v: Theme | null = null;
+  try { v = localStorage.getItem(KEY) as Theme | null; } catch { return "system"; }
   return v === "light" || v === "dark" || v === "system" ? v : "system";
 }
 
@@ -19,7 +20,7 @@ export function applyTheme(theme: Theme) {
 }
 
 export function setTheme(theme: Theme) {
-  localStorage.setItem(KEY, theme);
+  try { localStorage.setItem(KEY, theme); } catch { /* Private browsing may disable storage. */ }
   applyTheme(theme);
 }
 
@@ -32,5 +33,6 @@ export function initTheme() {
       if (getStoredTheme() === "system") applyTheme("system");
     };
     mq.addEventListener?.("change", handler);
+    return ()=>mq.removeEventListener?.("change",handler);
   }
 }

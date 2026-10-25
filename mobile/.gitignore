@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+web-build
+build
+*.log
+.DS_Store
+# React Native CLI — DO commit android/ and ios/ (native projects).
+# (Old Expo scaffold ignored them; pure RN needs them.)

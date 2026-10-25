@@ -1,0 +1,4 @@
+import {NextResponse} from "next/server";
+import {requireUser,apiError} from "@/server/http/api";
+import {ensureDefaultWorkspaceForUser,assertWorkspaceMember} from "@/server/services/workspace-service";import {prisma} from "@/lib/prisma/client";import {listCalendars} from "@/server/services/calendar-service";
+export async function GET(){try{const user=await requireUser();const {workspaceId}=await ensureDefaultWorkspaceForUser(user.id,{email:user.email,displayName:user.user_metadata?.full_name});const [profile,membership,calendars]=await Promise.all([prisma.userProfile.findUniqueOrThrow({where:{id:user.id}}),assertWorkspaceMember(user.id,workspaceId),listCalendars(user.id,workspaceId)]);return NextResponse.json({user:{id:user.id,email:user.email,displayName:profile.displayName},workspaceId,timeZone:profile.defaultTimezone,calendars,canManageCalendars:["owner","admin"].includes(membership.role)},{headers:{"Cache-Control":"no-store"}});}catch(e){return apiError(e);}}

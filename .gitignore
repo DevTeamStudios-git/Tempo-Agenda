@@ -45,3 +45,16 @@ Thumbs.db
 
 # keep example env
 !.env.example
+
+# Native generated files
+mobile/.gradle/
+mobile/android/.gradle/
+mobile/android/app/.cxx/
+mobile/android/local.properties
+mobile/ios/Pods/
+mobile/ios/.xcode.env.local
+mobile/.native-template/
+*.apk
+*.aab
+
+mobile/android/.cxx/

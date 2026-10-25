@@ -19,22 +19,8 @@ export function isSupabaseConfigured(): boolean {
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!supabaseAnonKey();
 }
 
-export function isDemoMode(): boolean {
-  // Notebook v3 §2.2 + P0 §3: demo mode must be explicit AND impossible in production.
-  // TEMPO_DEMO_MODE=true alone is not enough — production must always fail closed.
-  return process.env.TEMPO_DEMO_MODE === "true" && process.env.NODE_ENV !== "production";
-}
-
 export async function createSupabaseServerClient() {
   if (!isSupabaseConfigured()) {
-    if (isDemoMode()) {
-      return {
-        auth: {
-          getUser: async () => ({ data: { user: null }, error: null }),
-          getSession: async () => ({ data: { session: null }, error: null }),
-        },
-      } as unknown as Awaited<ReturnType<typeof createServerClient>>;
-    }
     throw new Error("Supabase not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
   }
   const cookieStore = await cookies();

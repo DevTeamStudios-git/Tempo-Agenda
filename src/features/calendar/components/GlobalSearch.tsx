@@ -52,6 +52,7 @@ export function GlobalSearch({
   useEffect(() => {
     const q = value.trim();
     if (!q) {
+      requestId.current++;
       setResults([]);
       setLoading(false);
       return;
@@ -62,6 +63,7 @@ export function GlobalSearch({
       try {
         const params = new URLSearchParams({ workspaceId, q, limit: "8" });
         calendarIds.forEach((cid) => params.append("calendarId", cid));
+        if(!calendarIds.length)params.set("_emptyCalendars","1");
         const res = await fetch(`/api/events/search?${params.toString()}`);
         if (id !== requestId.current) return; // stale
         if (!res.ok) { setResults([]); return; }

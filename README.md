@@ -1,4 +1,10 @@
+# Tempo V2 — web and native mobile
+
+This repository is the canonical implementation for the old Tempo and V2 projects. Web/API: src. Native Android/iOS: mobile. Shared API contracts: shared. See [consolidation and setup](docs/V2_CONSOLIDATION.md) and [mobile instructions](mobile/README.md).
+
 # Tempo
+
+See [current implementation status](IMPLEMENTATION_STATUS.md) for the October 24 fixes, new calendar features, verification results, and remaining work.
 
 Production calendar built from `tempo-construction-notebook` + `tempo-agenda.html` prototype.
 
@@ -10,7 +16,7 @@ Production calendar built from `tempo-construction-notebook` + `tempo-agenda.htm
 * Supabase Auth (`src/lib/supabase/{server,browser}.ts`, `middleware.ts` token refresh, `src/app/auth/callback/route.ts`)
 * `/login` (email/password + Google OAuth `signInWithOAuth`)
 * Server resolver `src/app/page.tsx` → `resolveDefaultWorkspace` / `ensureDefaultWorkspaceForUser` (`src/server/services/workspace-service.ts`) — never trusts client `workspaceId`; auto-creates `UserProfile` + `Workspace` + `Membership owner` + 4 calendars (`Work`/`Personal`/`Study`/`Health`) idempotently inside a transaction
-* Demo mode is explicit only: `TEMPO_DEMO_MODE=true && NODE_ENV !== "production"` (`src/lib/supabase/server.ts`); otherwise missing env fails closed (`500`)
+* Supabase authentication and the database are required; no demo bypass is available.
 
 **Domain:**
 * `prisma/schema.prisma` — `UserProfile`, `Workspace` (`slug` unique), `Membership` (`owner|admin|member|viewer`, `@@unique(workspace,member)`), `Calendar` (`is_default` partial unique index), `Event` (`timestamptz` + `timezone` + `allDay` + `deletedAt` soft-delete), `RecurrenceRule`, `Attendee`, `Reminder`, `AuditLog`
@@ -47,7 +53,7 @@ Production calendar built from `tempo-construction-notebook` + `tempo-agenda.htm
 ```bash
 npm install
 cp .env.example .env  # fill NEXT_PUBLIC_SUPABASE_URL (+PUBLISHABLE_KEY), SUPABASE_SECRET_KEY, DATABASE_URL (6543 pgbouncer), DIRECT_URL (5432)
-# set TEMPO_DEMO_MODE=true for local mock without DB, otherwise leave false
+# configure Supabase and Prisma connection settings
 npx prisma migrate dev --name init  # or npx prisma db push
 npm run prisma:seed   # 19 prototype events for current monday
 npm run dev

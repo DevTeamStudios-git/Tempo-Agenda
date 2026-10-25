@@ -1,0 +1,1 @@
+export default function ConnectMobile(){return <main className="mobile-connect"><div className="mark"/><h1>Opening your workspace…</h1><p>Securely restoring your Tempo session.</p><a href="/login?next=/mobile">Continue to sign in</a></main>;}

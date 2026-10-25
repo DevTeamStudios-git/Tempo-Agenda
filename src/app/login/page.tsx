@@ -1,4 +1,6 @@
 "use client";
+import {safeReturnPath} from "../../../shared/mobile-policy";
+import {isNativeApp,postNative} from "@/lib/native/bridge";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -36,7 +38,8 @@ export default function LoginPage() {
         if (error) setMsg({ text: error.message, type: "error" });
         else {
           setMsg({ text: "Signed in — redirecting…", type: "success" });
-          window.location.href = "/";
+          const next=new URL(window.location.href).searchParams.get("next");
+          window.location.href = safeReturnPath(next);
         }
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
@@ -49,6 +52,7 @@ export default function LoginPage() {
   }
 
   async function signInWithGoogle() {
+    if(isNativeApp()){postNative({type:"tempo:oauth",provider:"google"});return;}
     setGoogleLoading(true);
     setMsg(null);
     const { error } = await supabase.auth.signInWithOAuth({

@@ -21,7 +21,7 @@ import { RealtimeClock } from "@/features/clock/components/RealtimeClock";
 import { PomodoroTimer } from "@/features/pomodoro/components/PomodoroTimer";
 import { GlobalSearch } from "./GlobalSearch";
 import { EventDialog } from "@/features/events/components/EventDialog";
-import { ChevronLeftIcon, ChevronRightIcon, DayViewIcon, WeekViewIcon, MonthViewIcon, AgendaViewIcon, PlusIcon, MenuIcon, SettingsIcon, PrintIcon, TrashIcon, BookIcon, YearViewIcon, CommandIcon, SearchIcon, HomeIcon, CalendarMarkIcon, EditIcon, DuplicateIcon, CopyIcon, CutIcon, PasteIcon, EyeIcon, SparklesIcon } from "@/lib/icons";
+import { ChevronLeftIcon, ChevronRightIcon, DayViewIcon, WeekViewIcon, MonthViewIcon, AgendaViewIcon, PlusIcon, MenuIcon, SettingsIcon, PrintIcon, SunIcon, TrashIcon, BookIcon, YearViewIcon, CommandIcon, SearchIcon, HomeIcon, CalendarMarkIcon, EditIcon, DuplicateIcon, CopyIcon, CutIcon, PasteIcon, EyeIcon, SparklesIcon } from "@/lib/icons";
 import { NotificationCenter } from "@/features/notifications/components/NotificationCenter";
 import { SettingsDialog } from "@/features/settings/components/SettingsDialog";
 import { PlanningDialog } from "@/features/planning/components/PlanningDialog";
@@ -39,6 +39,7 @@ import { useRealtimeEvents } from "../hooks/useRealtimeEvents";
 import { useReminderNotifier } from "@/features/notifications/hooks/useReminderNotifier";
 import { useSettings } from "@/lib/settings";
 import type { CalendarSummary, CalendarView, EventDraft, EventRecord } from "../types";
+import {getStoredTheme,setTheme} from "@/lib/theme";
 import { dayKey } from "@/lib/dates/date-utils";
 import { formatInTimeZone } from "date-fns-tz";
 
@@ -481,7 +482,7 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
           <button className="icon" aria-label="Next" onClick={handleNext}><ChevronRightIcon /></button>
         </div>
         <h1 id="title" aria-live="polite" onClick={() => setShowDatePicker(true)} style={{ cursor:"pointer" }} title="Jump to date">{title}</h1>
-        <div style={{ flex: 1 }} />
+        <div className="top-spacer" style={{ flex: 1 }} />
         <GlobalSearch
           value={searchInput}
           onChange={setSearchInput}
@@ -492,10 +493,10 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
           onJumpToDay={jumpToDay}
           onJumpToEvent={jumpToEvent}
         />
-        <NotificationCenter workspaceId={workspaceId} />
-        <button className="icon" aria-label="Command palette" title="Command palette (Ctrl+K)" onClick={() => setCommandOpen(true)}><CommandIcon size={18} /></button>
-        <button className="icon" aria-label="AI Assistant" title="AI Assistant" onClick={() => setAiChatOpen(true)} style={{ color: "var(--accent)" }}><SparklesIcon size={18} /></button>
-        <div className="seg" role="group" aria-label="View">
+        <div className="notification-trigger"><NotificationCenter workspaceId={workspaceId} /></div>
+        <button className="icon command-trigger" aria-label="Command palette" title="Command palette (Ctrl+K)" onClick={() => setCommandOpen(true)}><CommandIcon size={18} /></button>
+        <button className="icon assistant-trigger" aria-label="AI Assistant" title="AI Assistant" onClick={() => setAiChatOpen(true)} style={{ color: "var(--accent)" }}><SparklesIcon size={18} /></button>
+        <div className="seg view-switcher" role="group" aria-label="View">
           {([
             ["day", DayViewIcon], ["week", WeekViewIcon], ["month", MonthViewIcon], ["agenda", AgendaViewIcon], ["book", BookIcon], ["year", YearViewIcon], ["notebook", BookIcon],
           ] as const).map(([v, Icon]) => (
@@ -504,13 +505,15 @@ function CalendarShellInner({ workspaceId, timeZone }: { workspaceId: string; ti
             </button>
           ))}
         </div>
-        <button className="icon" aria-label="Print" title="Print" onClick={() => setPrintOpen(true)}><PrintIcon /></button>
-        <button className="icon" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)}><SettingsIcon /></button>
-        <button className="btn primary" onClick={() => openNewEventAt(createDateKey, 9 * 60)} disabled={!calendars.length} title={!calendars.length ? "Create a calendar first" : undefined} style={{ opacity: !calendars.length ? 0.5 : 1 }}><PlusIcon size={16} /> Create</button>
+        <button className="icon print-trigger" aria-label="Print" title="Print" onClick={() => setPrintOpen(true)}><PrintIcon /></button>
+        <button className="icon theme-trigger" aria-label="Toggle color theme" title="Toggle color theme" onClick={()=>{const dark=getStoredTheme()==="dark"||(getStoredTheme()==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);setTheme(dark?"light":"dark");}}><SunIcon/></button>
+        <button className="icon settings-trigger" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)}><SettingsIcon /></button>
+        <button className="btn primary create-trigger" onClick={() => openNewEventAt(createDateKey, 9 * 60)} disabled={!calendars.length} title={!calendars.length ? "Create a calendar first" : undefined} style={{ opacity: !calendars.length ? 0.5 : 1 }}><PlusIcon size={16} /> Create</button>
       </header>
 
       <div className="body">
         <aside className={`side${sidebarOpen ? " open" : ""}`} id="side" aria-label="Sidebar">
+          <button className="side-dismiss btn" aria-label="Close sidebar" onClick={()=>setSidebarOpen(false)}>Close menu ×</button>
           <button className="create" onClick={() => { setSidebarOpen(false); openNewEventAt(createDateKey, 9 * 60); }} disabled={!calendars.length} title={!calendars.length ? "Create a calendar first" : undefined} style={{ opacity: !calendars.length ? 0.5 : 1 }}><PlusIcon size={20} />Create</button>
           <RealtimeClock timeZone={effectiveTimeZone} />
           <MiniCalendar

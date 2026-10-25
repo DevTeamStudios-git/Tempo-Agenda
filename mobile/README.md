@@ -2,7 +2,7 @@
 
 The native companion lives inside the canonical Tempo repository. It uses the same Supabase sign-in and Next.js API/database as the web app; it never contains a database password or AI server key.
 
-Implemented: email/password sign-in and sign-up, calendar visibility, month and agenda views, event creation/editing/deletion, recurrence creation and occurrence edit scope, calendar create/edit/archive/delete/restore, AI permissions and reviewed AI actions. Keychain/Android Keystore stores sessions.
+The native app displays the same responsive calendar workspace as the browser: Day, Week, Month, Agenda, Book, Year and Notebook, with the same event editor, calendar management, tasks, notifications, settings, AI permissions and reviewed actions. A compact toolbar, scrollable week grid, bottom navigation and safe areas adapt it to phones and tablets. It starts in dark mode unless a theme was already chosen.
 
 ## Run
 
@@ -16,7 +16,9 @@ Implemented: email/password sign-in and sign-up, calendar visibility, month and 
 
 npm run typecheck checks native TypeScript. npm run build:android-debug creates android/app/build/outputs/apk/debug/app-debug.apk; Metro must be running for this development build. Release signing must be configured with your own private key. iOS builds require macOS/Xcode and have not been validated on this Windows host.
 
-The web app provides the remaining advanced features, including imports/exports, tasks, notebooks, printing and invitation links. They are not yet native screens.
+Imports use the system file picker. Exports open the native save/share sheet, and printing uses the system print dialog. The shared workspace requires a reachable Tempo backend; this is not an offline calendar. Browser sessions persist in the embedded browser. Sessions from the previous companion app migrate once from Keychain/Keystore. Google sign-in opens the system browser and returns through a PKCE-protected tempo:// callback.
+
+In Supabase Auth, allow the deployed backend callback URL with its native query parameters (for example https://your-host/auth/callback**). Keep the normal browser callback allowed as well. Only public Supabase configuration belongs in the mobile environment.
 
 Metro is installed locally by npm ci. From the repository root run npm run mobile:install, then npm run mobile:start; keep that terminal open and run npm run mobile:android in a second terminal. Vercel serves the web/API; Metro is only used for local native development.
 

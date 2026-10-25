@@ -12,7 +12,8 @@
     "types": [
       "react",
       "react-native"
-    ]
+    ],
+    "module": "esnext"
   },
   "include": [
     "src/**/*",

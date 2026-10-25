@@ -1,6 +1,7 @@
 "use client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import {NativeBridge} from "@/features/mobile/components/NativeBridge";
 import { initTheme } from "@/lib/theme";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -11,5 +12,5 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     },
   }));
   useEffect(() => initTheme(), []);
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return <QueryClientProvider client={client}><NativeBridge/>{children}</QueryClientProvider>;
 }

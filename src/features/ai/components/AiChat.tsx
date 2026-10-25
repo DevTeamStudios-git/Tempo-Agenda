@@ -1,4 +1,5 @@
 "use client";
+import {clientId} from "@/lib/client-id";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { AssistantPermissions } from "./AssistantPermissions";
 import { useQueryClient } from "@tanstack/react-query";
@@ -65,7 +66,7 @@ export function AiChat({
       setMsgs((old) => [
         ...old,
         {
-          id: crypto.randomUUID(),
+          id: clientId(),
           role: "assistant",
           text: "Error: " + (e as Error).message,
         },

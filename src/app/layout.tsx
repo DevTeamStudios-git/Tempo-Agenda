@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { FAVICON_SVG_DATA_URI } from "@/lib/icons";
 import { AppProviders } from "./providers";
 import { siteConfig } from "@/lib/site";
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AppProviders>{children}</AppProviders>
+        <Analytics />
       </body>
     </html>
   );
